@@ -1,0 +1,85 @@
+/* src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* Tailwind v4 Configuration */
+@import "tailwindcss";
+
+@variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  
+  /* Mapeando variáveis do sistema para o tema do Tailwind se necessário */
+  --color-page: var(--bg-page);
+  --color-card: var(--bg-card);
+}
+
+/* 🎨 Estilos Globais Fundamentais */
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ajustes de Seleção Monocromáticos */
+::selection {
+  background-color: rgba(37, 78, 112, 0.3);
+  color: inherit;
+}
+
+/* 📜 Scrollbar Customizada Vinculada ao Tema */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--bg-hover);
+  border-radius: 20px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--accent);
+}
+
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background-color: var(--bg-hover); border-radius: 20px; }
+
+/* 🖨️ Regras de Impressão */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body, html {
+    background: white !important;
+    color: black !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Faz o Cockpit de Detalhes expandir o documento para largura total */
+  .print-full-width {
+    width: 100% !important;
+    max-width: none !important;
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Garante que o documento (Voucher/Ticket) ocupe a página toda */
+  .print-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  @page {
+    margin: 0.5cm;
+    size: auto;
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "tilend-email-service",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Serviço de e-mail para o TI LEND — Anexar e Deletar (GLPI Mailgate)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --env-file=.env server.js",
+    "dev": "node --watch --env-file=.env server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.103.2",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "nodemailer": "^7.0.3"
+  }
+}
