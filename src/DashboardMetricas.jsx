@@ -515,7 +515,7 @@ const DashboardMetricas = React.memo(({ triggerAtualizacao, usuarioAtual, onOpen
       <div className="flex flex-col lg:flex-row gap-0">
 
         {/* 🔴 ÁREA PRINCIPAL (75%) */}
-        <div className="flex-1 space-y-10 min-w-0 pr-10">
+        <div className="flex-1 space-y-10 min-w-0 pr-0">
 
           {/* CABEÇALHO */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 2xl:gap-6">
@@ -791,7 +791,7 @@ const DashboardMetricas = React.memo(({ triggerAtualizacao, usuarioAtual, onOpen
         </div>
 
         {/* 🔵 SIDEBAR DIREITA (25%) */}
-        <div className="w-full lg:w-96 shrink-0 flex flex-col gap-10 bg-[var(--bg-card)] p-10 rounded-3xl">
+        <div className="w-full lg:w-[25%] space-y-6 2xl:space-y-8 pl-0 lg:pl-6 shrink-0 bg-[var(--bg-card)] p-6 rounded-3xl">
 
           {/* NOSSOS AGENTES */}
           <div className="space-y-8 shrink-0">

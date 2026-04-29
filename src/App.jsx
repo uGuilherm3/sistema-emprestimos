@@ -27,6 +27,7 @@ import KnowledgeBot from './KnowledgeBot';
 import ChatBotIA from './components/ChatBotIA';
 import AgendaEstiloGoogle from './AgendaEstiloGoogle';
 import { fetchGLPIInventory } from './utils/glpiClient';
+import LogoImg from './assets/logo.jpg';
 
 
 const levenshtein = (a, b) => {
@@ -84,10 +85,7 @@ export default function App() {
   const [itemDetalhado, setItemDetalhado] = useState(null);
   const [triggerAtualizacao, setTriggerAtualizacao] = useState(0);
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-    const salvo = localStorage.getItem('tilend_sidebar_open');
-    return salvo !== null ? JSON.parse(salvo) : true;
-  });
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isGestaoOpen, setIsGestaoOpen] = useState(() => {
     const salvo = localStorage.getItem('tilend_gestao_open');
     return salvo !== null ? JSON.parse(salvo) : true;
@@ -523,7 +521,7 @@ export default function App() {
           ];
 
           let results = await Promise.all(queries);
-          
+
           // Fallback para lembretes caso a coluna participantes não exista
           if (results[4].error) {
             console.warn("Erro lembretes participantes, tentando fallback...");
@@ -860,29 +858,18 @@ export default function App() {
 
       <div className="no-print md:hidden fixed top-0 left-0 right-0 h-20 bg-[var(--bg-page)]/80 backdrop-blur-md flex items-center justify-between px-6 z-40 transition-colors duration-300 shadow-sm border-b border-transparent">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-slate-900 dark:bg-[var(--bg-card)] rounded-xl flex items-center justify-center shadow-lg"><span className="text-white dark:text-black font-black text-xs italic">TI</span></div>
-          <span className="text-xl font-black tracking-tighter text-slate-900 dark:text-white">LEND.</span>
+          <div className="w-[40px] h-[40px] rounded-xl flex items-center justify-center border-red-500 border overflow-hidden"><img src={LogoImg} className="w-full h-full object-cover" alt="Logo" /></div>
         </div>
         <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-slate-500 dark:text-[#A0A0A0]"><Menu size={24} /></button>
       </div>
 
       {isMobileMenuOpen && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden animate-in fade-in" onClick={() => setIsMobileMenuOpen(false)}></div>}
 
-      <aside className={`no-print fixed inset-y-0 left-0 z-50 ${isSidebarOpen ? 'w-72 md:w-64' : 'w-24'} bg-[var(--bg-page)] border-r border-transparent flex flex-col h-screen transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
-        <div className="h-24 flex items-center px-6 shrink-0">
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className={`flex items-center gap-3 overflow-hidden transition-all duration-300 hover:opacity-80 active:scale-95 py-2 rounded-xl group/logo ${!isSidebarOpen ? 'w-full justify-center' : ''}`}
-          >
-            <div className="w-8 h-8 bg-slate-900 dark:bg-white rounded-xl flex items-center justify-center shrink-0 transition-all">
-              <span className="text-white dark:text-[#0f172a] font-black text-[10px] italic">TI</span>
-            </div>
-            {isSidebarOpen && (
-              <span className="text-lg font-black tracking-tighter text-slate-900 dark:text-white whitespace-nowrap animate-in fade-in slide-in-from-left-2 transition-all">
-                TI LEND.
-              </span>
-            )}
-          </button>
+      <aside className={`no-print fixed inset-y-0 left-0 z-50 p-[0.6vw] bg-[var(--bg-page)] flex flex-col h-screen transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
+        <div className="h-10 flex items-center justify-center shrink-0">
+          <div className="w-[39px] h-[39px] rounded-xl flex items-center justify-center shrink-0 transition-all overflow-hidden">
+            <img src={LogoImg} className="w-full h-full object-cover" alt="Logo" />
+          </div>
 
           {isMobileMenuOpen && (
             <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden text-slate-400 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white transition-colors p-1 ml-auto">
@@ -891,170 +878,109 @@ export default function App() {
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto hide-scrollbar pt-0 pb-6 space-y-8 overflow-x-hidden">
-          <div>
-            <div className="space-y-2 px-4 w-full">
+        <div className="flex-1 overflow-y-auto hide-scrollbar py-2">
+          <div className="space-y-2 w-full">
+            <button onClick={() => mudarAba('dashboard')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'dashboard' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+                <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'dashboard' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
+              <Home size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+            </button>
 
-              <button onClick={() => mudarAba('dashboard')} className={`w-full flex items-center transition-all relative group cursor-pointer ${isSidebarOpen ? 'px-8 py-3.5 gap-4' : 'justify-center py-3.5'} ${abaAtiva === 'dashboard' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
-                <div className={`absolute left-0 w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'dashboard' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
-                <Home size={18} className="shrink-0 transition-transform group-hover:scale-110" />
-                {isSidebarOpen && <span className="text-[13px] font-bold whitespace-nowrap truncate tracking-tight">Dashboard</span>}
-              </button>
+            <button onClick={() => mudarAba('agenda')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'agenda' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+                <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'agenda' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
+              <Calendar size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+            </button>
 
-              <button onClick={() => mudarAba('agenda')} className={`w-full flex items-center transition-all relative group cursor-pointer ${isSidebarOpen ? 'px-8 py-3.5 gap-4' : 'justify-center py-3.5'} ${abaAtiva === 'agenda' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
-                <div className={`absolute left-0 w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12_px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'agenda' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
-                <Calendar size={18} className="shrink-0 transition-transform group-hover:scale-110" />
-                {isSidebarOpen && <span className="text-[13px] font-bold whitespace-nowrap truncate tracking-tight">Minha Agenda</span>}
-              </button>
-
-              <button onClick={() => mudarAba('feed')} className={`w-full flex items-center justify-between transition-all relative group cursor-pointer ${isSidebarOpen ? 'px-8 py-3.5' : 'justify-center py-3.5'} ${abaAtiva === 'feed' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
-                <div className={`absolute left-0 w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'feed' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
-                <div className="flex items-center gap-4 relative">
-                  <div className="relative">
-                    <Inbox size={18} className="shrink-0 transition-transform group-hover:scale-110" />
-                    {hasUnreadFeed && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#8D3046] rounded-full animate-pulse shadow-[0_0_8px_0_#8D3046]"></div>}
-                  </div>
-                  {isSidebarOpen && <span className="text-[13px] font-bold whitespace-nowrap truncate tracking-tight">Feed</span>}
-                </div>
-              </button>
-
-              <div className={`transition-all relative group ${isGestaoActive && isSidebarOpen ? 'bg-[#254E70]/5' : ''}`}>
-                <button onClick={() => setIsGestaoOpen(!isGestaoOpen)} className={`w-full flex items-center justify-between transition-all relative cursor-pointer ${isSidebarOpen ? 'px-8 py-3.5' : 'justify-center py-3.5'} ${isGestaoActive ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
-                  <div className={`absolute left-0 w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${isGestaoActive ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
-                  <div className="flex items-center gap-4">
-                    <Activity size={18} className="shrink-0 transition-transform group-hover:scale-110" />
-                    {isSidebarOpen && <span className="text-[13px] font-bold whitespace-nowrap truncate tracking-tight">Operacional</span>}
-                  </div>
-                  {isSidebarOpen && (isGestaoOpen ? <ChevronUp size={14} className="text-slate-400 dark:text-[#606060] shrink-0 translate-y-px" /> : <ChevronDown size={14} className="text-slate-400 dark:text-[#606060] shrink-0 translate-y-px" />)}
-                </button>
-
-                {isGestaoOpen && (
-                  <div className={`pb-4 pt-2 ${!isSidebarOpen ? 'flex flex-col items-center gap-3 mt-2' : 'space-y-1'}`}>
-                    <button onClick={() => mudarAba('estoque')} className={`w-full flex items-center transition-all cursor-pointer ${abaAtiva === 'estoque' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'} ${isSidebarOpen ? 'gap-4 pl-12 pr-4 py-2.5' : 'justify-center py-3 hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl'}`} title="Estoque Físico">
-                      <div className={`rounded-sm bg-[#254E70] shrink-0 ${isSidebarOpen ? 'w-1.5 h-1.5' : 'w-2 h-2'} ${abaAtiva === 'estoque' ? 'shadow-[0_0_8px_0_#254E70]' : ''}`}></div>
-                      {isSidebarOpen && <span className="text-xs whitespace-nowrap truncate">Estoque</span>}
-                    </button>
-                    <button onClick={() => mudarAba('saidas')} className={`w-full flex items-center transition-all cursor-pointer ${abaAtiva === 'saidas' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'} ${isSidebarOpen ? 'gap-4 pl-12 pr-4 py-2.5' : 'justify-center py-3 hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl'}`} title="Registrar Saída">
-                      <div className={`rounded-sm bg-[#8D3046] shrink-0 ${isSidebarOpen ? 'w-1.5 h-1.5' : 'w-2 h-2'} ${abaAtiva === 'saidas' ? 'shadow-[0_0_8px_0_#8D3046]' : ''}`}></div>
-                      {isSidebarOpen && <span className="text-xs whitespace-nowrap truncate">Saídas</span>}
-                    </button>
-                    <button onClick={() => mudarAba('entradas')} className={`w-full flex items-center transition-all cursor-pointer ${abaAtiva === 'entradas' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'} ${isSidebarOpen ? 'gap-4 pl-12 pr-4 py-2.5' : 'justify-center py-3 hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl'}`} title="Baixar Devolução">
-                      <div className={`rounded-sm bg-[#254E70] shrink-0 ${isSidebarOpen ? 'w-1.5 h-1.5' : 'w-2 h-2'} ${abaAtiva === 'entradas' ? 'shadow-[0_0_8px_0_#254E70]' : ''}`}></div>
-                      {isSidebarOpen && <span className="text-xs whitespace-nowrap truncate">Ativos</span>}
-                    </button>
-                    <button onClick={() => mudarAba('calendario')} className={`w-full flex items-center transition-all cursor-pointer ${abaAtiva === 'calendario' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'} ${isSidebarOpen ? 'gap-4 pl-12 pr-4 py-2.5' : 'justify-center py-3 hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl'}`} title="Calendário de Empréstimos">
-                      <div className={`rounded-sm bg-[#8D3046] shrink-0 ${isSidebarOpen ? 'w-1.5 h-1.5' : 'w-2 h-2'} ${abaAtiva === 'calendario' ? 'shadow-[0_0_8px_0_#8D3046]' : ''}`}></div>
-                      {isSidebarOpen && <span className="text-xs whitespace-nowrap truncate">Calendário</span>}
-                    </button>
-
-                  </div>
-                )}
+            <button onClick={() => mudarAba('feed')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'feed' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+                <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'feed' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
+              <div className="relative">
+                <Inbox size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+                {hasUnreadFeed && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#8D3046] rounded-full animate-pulse shadow-[0_0_8px_0_#8D3046]"></div>}
               </div>
+            </button>
 
-              <button onClick={() => mudarAba('chamados_externos')} className={`w-full flex items-center transition-all relative group cursor-pointer ${isSidebarOpen ? 'px-8 py-3.5 gap-4' : 'justify-center py-3.5'} ${abaAtiva === 'chamados_externos' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
-                <div className={`absolute left-0 w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'chamados_externos' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
-                <LayoutGrid size={18} className="shrink-0 transition-transform group-hover:scale-110" />
-                {isSidebarOpen && <span className="text-[13px] font-bold whitespace-nowrap truncate tracking-tight">Chamados</span>}
+            <div className="transition-all relative group">
+              <button onClick={() => setIsGestaoOpen(!isGestaoOpen)} className={`w-full flex items-center justify-center py-3.5 transition-all relative cursor-pointer ${isGestaoActive ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+                  <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${isGestaoActive ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
+                <Activity size={18} className="shrink-0 transition-transform group-hover:scale-110" />
               </button>
 
-              <button onClick={() => mudarAba('impressoras')} className={`w-full flex items-center transition-all relative group cursor-pointer ${isSidebarOpen ? 'px-8 py-3.5 gap-4' : 'justify-center py-3.5'} ${abaAtiva === 'impressoras' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
-                <div className={`absolute left-0 w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'impressoras' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
-                <Printer size={18} className="shrink-0 transition-transform group-hover:scale-110" />
-                {isSidebarOpen && (
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    <span className="text-[13px] font-bold whitespace-nowrap truncate tracking-tight">Impressoras</span>
-                    <span className="text-[8px] bg-[#8D3046]/10 text-[#8D3046] px-1.5 py-0.5 rounded-md font-black uppercase tracking-tighter shrink-0">BETA</span>
-                  </div>
-                )}
-              </button>
-
-
-              <button onClick={() => mudarAba('bot_conhecimento')} className={`w-full flex items-center transition-all relative group cursor-pointer ${isSidebarOpen ? 'px-8 py-3.5 gap-4' : 'justify-center py-3.5'} ${abaAtiva === 'bot_conhecimento' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
-                <div className={`absolute left-0 w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'bot_conhecimento' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
-                <div className="relative">
-                  <MessageSquare size={18} className="shrink-0 transition-transform group-hover:scale-110" />
-                  <Sparkles size={10} className="absolute -top-1.5 -right-1.5 text-[#254E70] animate-pulse" strokeWidth={3} />
+              {isGestaoOpen && (
+                <div className="flex flex-col items-center gap-3 mt-2 pb-4 pt-2">
+                  <button onClick={() => mudarAba('estoque')} className={`w-full flex items-center justify-center py-3 transition-all cursor-pointer hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl ${abaAtiva === 'estoque' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`} title="Estoque Físico">
+                    <div className={`rounded-sm bg-[#254E70] shrink-0 w-2 h-2 ${abaAtiva === 'estoque' ? 'shadow-[0_0_8px_0_#254E70]' : ''}`}></div>
+                  </button>
+                  <button onClick={() => mudarAba('saidas')} className={`w-full flex items-center justify-center py-3 transition-all cursor-pointer hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl ${abaAtiva === 'saidas' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`} title="Registrar Saída">
+                    <div className={`rounded-sm bg-[#8D3046] shrink-0 w-2 h-2 ${abaAtiva === 'saidas' ? 'shadow-[0_0_8px_0_#8D3046]' : ''}`}></div>
+                  </button>
+                  <button onClick={() => mudarAba('entradas')} className={`w-full flex items-center justify-center py-3 transition-all cursor-pointer hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl ${abaAtiva === 'entradas' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`} title="Baixar Devolução">
+                    <div className={`rounded-sm bg-[#254E70] shrink-0 w-2 h-2 ${abaAtiva === 'entradas' ? 'shadow-[0_0_8px_0_#254E70]' : ''}`}></div>
+                  </button>
+                  <button onClick={() => mudarAba('calendario')} className={`w-full flex items-center justify-center py-3 transition-all cursor-pointer hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl ${abaAtiva === 'calendario' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`} title="Calendário de Empréstimos">
+                    <div className={`rounded-sm bg-[#8D3046] shrink-0 w-2 h-2 ${abaAtiva === 'calendario' ? 'shadow-[0_0_8px_0_#8D3046]' : ''}`}></div>
+                  </button>
                 </div>
-                {isSidebarOpen && (
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    <span className="text-[13px] font-bold whitespace-nowrap truncate tracking-tight">BILU AI</span>
-                    <span className="text-[8px] bg-[#254E70]/10 text-[#254E70] px-1.5 py-0.5 rounded-md font-black uppercase tracking-tighter shrink-0">IA</span>
-                  </div>
-                )}
-              </button>
-
-              <button onClick={() => mudarAba('relatorios')} className={`w-full flex items-center transition-all relative group cursor-pointer ${isSidebarOpen ? 'px-8 py-3.5 gap-4' : 'justify-center py-3.5'} ${abaAtiva === 'relatorios' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
-                <div className={`absolute left-0 w-[5px] rounded-r-full bg-[#8D3046] shadow-[0_0_12px_rgba(141,48,70,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'relatorios' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
-                <FileText size={18} className="shrink-0 transition-transform group-hover:scale-110" />
-                {isSidebarOpen && <span className="text-[13px] font-bold whitespace-nowrap truncate tracking-tight">Relatórios e Dados</span>}
-              </button>
+              )}
             </div>
+
+            <button onClick={() => mudarAba('chamados_externos')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'chamados_externos' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+                <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'chamados_externos' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
+              <LayoutGrid size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+            </button>
+
+            <button onClick={() => mudarAba('impressoras')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'impressoras' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+                <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'impressoras' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
+              <Printer size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+            </button>
+
+            <button onClick={() => mudarAba('bot_conhecimento')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'bot_conhecimento' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+                <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'bot_conhecimento' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
+              <div className="relative">
+                <MessageSquare size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+                <Sparkles size={10} className="absolute -top-1.5 -right-1.5 text-[#254E70] animate-pulse" strokeWidth={3} />
+              </div>
+            </button>
+
+            <button onClick={() => mudarAba('relatorios')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'relatorios' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+                <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#8D3046] shadow-[0_0_12_rgba(141,48,70,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'relatorios' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
+              <FileText size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+            </button>
           </div>
         </div>
 
-        <div className="p-4 shrink-0 flex flex-col gap-3 relative pb-6 border-b border-transparent">
-          {/* BOTÃO DE TEMA COM TOGGLE INTEGRADO */}
-          <button
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className={`w-full flex items-center transition-all text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white hover:bg-[var(--bg-soft)] dark:hover:bg-white/5 cursor-pointer ${isSidebarOpen ? 'px-4 py-3.5 gap-3 rounded-2xl' : 'justify-center py-4 rounded-2xl'}`}
-            title={isDarkMode ? 'Mudar para Claro' : 'Mudar para Escuro'}
-          >
-            {isSidebarOpen ? (
-              <>
-                {isDarkMode ? <Sun size={18} className="shrink-0 text-[#F59E0B]" /> : <Moon size={18} className="shrink-0 text-[#254E70]" />}
-                <span className="text-[13px] font-semibold whitespace-nowrap truncate flex-1 text-left">
-                  {isDarkMode ? 'Modo Claro' : 'Modo Escuro'}
-                </span>
-                <div className={`w-9 h-5 rounded-full p-1 transition-all duration-300 relative ml-auto ${isDarkMode ? 'bg-[#254E70]' : 'bg-slate-300'}`}>
-                  <div className={`w-3 h-3 bg-white rounded-full shadow-sm transition-all duration-300 transform ${isDarkMode ? 'translate-x-4' : 'translate-x-0'}`} />
-                </div>
-              </>
-            ) : (
-              <div className={`w-9 h-5 rounded-full p-1 transition-all duration-300 relative ${isDarkMode ? 'bg-[#254E70]' : 'bg-slate-300'}`}>
-                <div className={`w-3 h-3 bg-white rounded-full shadow-sm transition-all duration-300 transform ${isDarkMode ? 'translate-x-4' : 'translate-x-0'}`} />
-              </div>
-            )}
-          </button>
+        <div className="shrink-0 flex flex-col gap-1 relative">
 
           <div className="relative w-full mt-2">
             {menuPerfilPopoverAberto && (
-              <div className={`absolute bottom-[calc(100%+12px)] ${isSidebarOpen ? 'left-0 w-full' : 'left-0 w-56'} bg-[var(--bg-card)] rounded-2xl z-50 animate-in slide-in-from-bottom-2 flex flex-col border border-slate-200 dark:border-white/10`}>
-                <button onClick={() => { mudarAba('perfil'); setMenuPerfilPopoverAberto(false); }} className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-[var(--bg-page)] dark:hover:bg-[var(--bg-card)]/5 transition-colors font-medium border-b border-slate-100 dark:border-white/5">
+              <div className="absolute bottom-[calc(100%+12px)] left-0 w-56 bg-[var(--bg-card)] rounded-2xl z-50 animate-in slide-in-from-bottom-2 flex flex-col border border-slate-200 dark:border-white/10 shadow-2xl">
+                <button onClick={() => { mudarAba('perfil'); setMenuPerfilPopoverAberto(false); }} className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-[var(--bg-hover)] dark:hover:bg-white/5 transition-all duration-300 font-medium border-b border-slate-100 dark:border-white/5 rounded-t-2xl">
                   <Settings size={16} className="shrink-0 text-[#254E70]" /> Editar Perfil
                 </button>
-                <button onClick={() => { setModoPortal(true); setMenuPerfilPopoverAberto(false); }} className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-[var(--bg-page)] dark:hover:bg-[var(--bg-card)]/5 transition-colors font-medium border-b border-slate-100 dark:border-white/5">
+                <button onClick={() => { setModoPortal(true); setMenuPerfilPopoverAberto(false); }} className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-[var(--bg-hover)] dark:hover:bg-white/5 transition-all duration-300 font-medium border-b border-slate-100 dark:border-white/5">
                   <Globe size={16} className="shrink-0 text-[#10B981]" /> Ir para Portal Público
                 </button>
-                <button onClick={handleLogout} className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-[#8D3046] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-400/10 transition-colors font-medium rounded-b-2xl">
+                <button onClick={handleLogout} className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-[#8D3046] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-400/10 transition-all duration-300 font-medium rounded-b-2xl">
                   <LogOut size={16} className="shrink-0" /> Encerrar Sessão
                 </button>
               </div>
             )}
 
-            <button onClick={() => setMenuPerfilPopoverAberto(!menuPerfilPopoverAberto)} className={`w-full flex items-center rounded-2xl p-2.5 hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 transition-all ${menuPerfilPopoverAberto ? 'bg-[var(--bg-soft)] dark:bg-[var(--bg-card)]/5' : ''} ${isSidebarOpen ? 'justify-between' : 'justify-center'}`}>
-              <div className="flex items-center gap-3 overflow-hidden">
+            <button onClick={() => setMenuPerfilPopoverAberto(!menuPerfilPopoverAberto)} className={`w-full flex items-center justify-center hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 transition-all rounded-xl ${menuPerfilPopoverAberto ? 'bg-[var(--bg-soft)] dark:bg-[var(--bg-card)]/5' : ''}`}>
+              <div className="flex items-center justify-center overflow-hidden">
                 {getFotoPerfilUrl() ? (
-                  <img src={getFotoPerfilUrl()} alt="Avatar" className={`${isSidebarOpen ? 'w-10 h-10' : 'w-9 h-9'} rounded-xl object-cover shrink-0 transition-all`} />
+                  <img src={getFotoPerfilUrl()} alt="Avatar" className="w-9 h-9 rounded-xl object-cover shrink-0 transition-all" />
                 ) : (
-                  <div className={`${isSidebarOpen ? 'w-10 h-10' : 'w-9 h-9'} rounded-xl bg-slate-900 dark:bg-[var(--bg-card)] flex items-center justify-center shrink-0 transition-all text-white dark:text-[var(--bg-page-dark)]`}>
+                  <div className="w-9 h-9 rounded-xl bg-slate-900 dark:bg-[var(--bg-card)] flex items-center justify-center shrink-0 transition-all text-white dark:text-[var(--bg-page-dark)]">
                     <span className="font-black text-xs uppercase">{usuarioAtual.get('username')?.charAt(0)}</span>
                   </div>
                 )}
-                {isSidebarOpen && (
-                  <div className="flex flex-col items-start overflow-hidden w-full text-left">
-                    <span className="text-[13px] font-bold text-slate-900 dark:text-white capitalize truncate max-w-full leading-tight">{usuarioAtual.get('username')}</span>
-                    <span className="text-[10px] text-slate-500 dark:text-[#606060] font-medium truncate max-w-full mt-0.5">{legendaUsuario}</span>
-                  </div>
-                )}
               </div>
-              {isSidebarOpen && <ChevronUp size={14} className={`text-slate-400 dark:text-[#606060] transition-transform duration-300 ${menuPerfilPopoverAberto ? 'rotate-180' : ''}`} />}
             </button>
           </div>
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col h-screen overflow-hidden relative bg-[var(--bg-page)] md:pt-0 pt-20 transition-colors duration-300">
-        <header className={`no-print h-24 flex items-center justify-between px-4 md:px-6 shrink-0 bg-[var(--bg-page)]/70 backdrop-blur-xl border-b border-transparent transition-all duration-300 ${spotifyAberto || notificacoesAberto ? 'z-[10000]' : 'z-30'}`}>
+      <main className="flex-1 flex flex-col h-screen overflow-hidden relative bg-[var(--bg-page)] md:pt-0 transition-colors duration-300">
+        <header className={`no-print flex items-center p-[0.6vw] justify-between shrink-0 bg-[var(--bg-page)]/70 backdrop-blur-xl transition-all duration-300 ${spotifyAberto || notificacoesAberto ? 'z-[10000]' : 'z-30'}`}>
           <div className={`flex items-center gap-4 ${abaAtiva === 'detalhes' ? 'cursor-pointer hover:opacity-70 transition-all' : ''}`} onClick={abaAtiva === 'detalhes' ? voltarDosDetalhes : undefined}>
             <div className="p-3 bg-[var(--bg-card)] rounded-2xl flex items-center gap-2 text-slate-900 dark:text-white shadow-sm transition-all duration-500">
               <HeaderIcon size={18} strokeWidth={2} className={`${abaAtiva === 'saidas' || abaAtiva === 'localizacoes' ? 'text-[#8D3046]' :
@@ -1095,7 +1021,7 @@ export default function App() {
                         )
                       })
                     ) : searchSuggestion ? (
-                      <div className="p-4 text-center">
+                      <div className="p-3 text-center">
                         <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-3">Você quis dizer?</p>
                         <button onClick={() => executarNavegacaoBusca(searchSuggestion.id)} className="w-full flex items-center justify-center gap-3 p-4 bg-[#254E70]/10 text-[#254E70] rounded-2xl hover:bg-[#254E70]/20 transition-all text-xs font-bold uppercase tracking-widest">
                           {searchSuggestion.nome} <ArrowRight size={14} />
@@ -1125,7 +1051,7 @@ export default function App() {
               {notificacoesAberto && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setNotificacoesAberto(false)}></div>
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-4 w-80 md:w-[450px] bg-[var(--bg-card)] rounded-[2rem] z-[10000] overflow-hidden animate-in slide-in-from-top-4 duration-200 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.2)] border border-slate-200/50 dark:border-white/10">
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-80 md:w-[450px] bg-[var(--bg-card)] rounded-[2rem] z-[10000] overflow-hidden animate-in slide-in-from-top-4 duration-200 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.2)] border border-slate-200/50 dark:border-white/10">
                     <div className="p-6 md:p-8 border-b border-slate-100 dark:border-white/5 flex justify-between items-center bg-[var(--bg-page)]/50 /50">
                       <div className="flex items-center gap-3">
                         <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 dark:text-white">Central de Alertas</h3>
@@ -1183,14 +1109,22 @@ export default function App() {
 
             {/* GRUPO DE UTILITÁRIOS (SPOTIFY + PERFIL) */}
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="p-2.5 rounded-full text-slate-500 dark:text-[#A0A0A0] hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer shrink-0"
+                title={isDarkMode ? 'Modo Claro' : 'Modo Escuro'}
+              >
+                {isDarkMode ? <Moon size={18} /> : <Sun size={18} />}
+              </button>
+
               {/* PLAYER SPOTIFY DINÂMICO */}
               <div className={`hidden md:block ${spotifyAberto ? 'relative z-[10000]' : 'relative z-10'}`}>
                 <div
-                  className={`flex items-center flex-row-reverse cursor-pointer rounded-full transition-all duration-300 ${!spotifyAberto ? 'group hover:bg-[var(--bg-card)] hover:p-1.5 hover:pr-2 hover:pl-14' : ''}`}
+                  className={`flex items-center flex-row-reverse cursor-pointer rounded-full transition-all duration-300 p-1.5 ${!spotifyAberto ? 'group hover:bg-[var(--bg-card)] hover:pl-12' : ''}`}
                   onClick={() => spotifyToken ? setSpotifyAberto(!spotifyAberto) : loginSpotify()}
                 >
                   {/* O DISCO (CD) */}
-                  <div className={`transition-all duration-700 rounded-full overflow-hidden flex items-center justify-center relative shrink-0 ${musicaAtual ? 'w-10 h-10' : 'w-10 h-10'}`}>
+                  <div className={`transition-all duration-700 rounded-full overflow-hidden flex items-center justify-center relative shrink-0 ${musicaAtual ? 'w-9 h-9' : 'w-9 h-9'}`}>
                     {musicaAtual ? (
                       <img
                         src={musicaAtual.capa}
@@ -1281,13 +1215,13 @@ export default function App() {
 
               <div className="flex items-center gap-4 pl-6 border-l border-slate-200 dark:border-white/10 h-10" onClick={() => mudarAba('perfil')}>
                 <div className="hidden lg:block text-right cursor-pointer group pt-1">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white capitalize transition-colors group-hover:text-[#254E70] leading-tight">{usuarioAtual.get('username')}</p>
-                  <p className="text-[10px] text-slate-500 dark:text-[#A0A0A0] font-bold uppercase tracking-widest mt-0.5">{legendaUsuario}</p>
+                  <p className="text-[12px] font-bold text-slate-900 dark:text-white capitalize transition-colors group-hover:text-[#254E70] leading-tight">{usuarioAtual.get('username')}</p>
+                  <p className="text-[10px] text-slate-500 dark:text-[#A0A0A0] font-bold mt-0.5">{legendaUsuario}</p>
                 </div>
                 {getFotoPerfilUrl() ? (
-                  <img src={getFotoPerfilUrl()} alt="Avatar" className="w-10 h-10 rounded-xl object-cover shadow-sm cursor-pointer hover:ring-2 hover:ring-[#254E70]/50 transition-all" />
+                  <img src={getFotoPerfilUrl()} alt="Avatar" className="w-[35px] h-[35px] rounded-full object-cover shadow-sm cursor-pointer transition-all" />
                 ) : (
-                  <div className="w-10 h-10 rounded-xl bg-[var(--bg-card)] flex items-center justify-center shadow-sm cursor-pointer hover:ring-2 hover:ring-[#254E70]/50 transition-all text-slate-600 dark:text-[#A0A0A0]">
+                  <div className="w-[39px] h-[39px] rounded-xl bg-[var(--bg-card)] flex items-center justify-center shadow-sm cursor-pointer hover:ring-2 hover:ring-[#254E70]/50 transition-all text-slate-600 dark:text-[#A0A0A0]">
                     <span className="font-black text-xs uppercase">{usuarioAtual.get('username')?.charAt(0)}</span>
                   </div>
                 )}
@@ -1297,7 +1231,7 @@ export default function App() {
         </header>
 
         <div className={`flex-1 custom-scrollbar ${abaAtiva === 'agenda' || abaAtiva === 'detalhes' || abaAtiva === 'chamados_externos' ? 'overflow-hidden' : 'overflow-y-auto'}`} onClick={() => { setNotificacoesAberto(false); setMenuPerfilPopoverAberto(false); setIsSearchOpen(false); }}>
-          <div className={`border-r border-transparent border-b border-transparent flex flex-col ${abaAtiva === 'agenda' ? 'h-[calc(100vh-82px)] pb-0' : ['detalhes', 'chamados_externos', 'saidas', 'estoque'].includes(abaAtiva) ? 'h-[calc(100vh-100px)] pb-4' : 'min-h-full pb-4'} ml-0 mr-4 md:mr-6`}>
+          <div className={`border-r border-transparent border-b border-transparent flex flex-col ${abaAtiva === 'agenda' ? 'h-[calc(100vh-82px)] pb-0' : ['detalhes', 'chamados_externos', 'saidas', 'estoque'].includes(abaAtiva) ? 'h-[calc(100vh-100px)] pb-[1%]' : 'min-h-full pb-[1%]'} m-[1%]`}>
             <Routes>
               <Route path="/" element={<DashboardMetricas triggerAtualizacao={triggerAtualizacao} usuarioAtual={usuarioAtual} onOpenDetails={abrirDetalhes} />} />
               <Route path="/feed" element={<div className="animate-in fade-in duration-500"><FeedResumo onNavigate={mudarAba} triggerUpdate={triggerAtualizacao} onOperacaoFeed={() => setTriggerAtualizacao(t => t + 1)} onOpenDetails={abrirDetalhes} /></div>} />
