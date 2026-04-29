@@ -509,13 +509,13 @@ const DashboardMetricas = React.memo(({ triggerAtualizacao, usuarioAtual, onOpen
   const pad = (n) => n.toString().padStart(2, '0');
 
   return (
-    <div className="flex flex-col gap-0 w-full overflow-x-hidden">
+    <div className="flex flex-col gap-10 w-full overflow-x-hidden">
 
       {/* 🟢 SEÇÃO SUPERIOR (ÁREA PRINCIPAL + SIDEBAR) */}
-      <div className="flex flex-col lg:flex-row gap-0">
+      <div className="flex flex-col lg:flex-row gap-10">
 
         {/* 🔴 ÁREA PRINCIPAL (75%) */}
-        <div className="flex-1 space-y-10 min-w-0 pr-0">
+        <div className="flex-1 space-y-12 lg:space-y-16 min-w-0 pr-0">
 
           {/* CABEÇALHO */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 2xl:gap-6">
@@ -572,7 +572,7 @@ const DashboardMetricas = React.memo(({ triggerAtualizacao, usuarioAtual, onOpen
 
             {/* Gráfico de Área */}
             <motion.div
-              className="lg:col-span-4 bg-[var(--bg-card)] p-6 2xl:p-8 rounded-3xl transition-all duration-300 relative border-none overflow-hidden"
+              className="lg:col-span-4 bg-[var(--bg-card)] p-8 2xl:p-10 rounded-3xl transition-all duration-300 relative border-none overflow-hidden"
             >
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 2xl:mb-12 gap-6 px-2">
                 <div className="flex items-center gap-6">
@@ -697,7 +697,7 @@ const DashboardMetricas = React.memo(({ triggerAtualizacao, usuarioAtual, onOpen
 
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
 
 
             <div
