@@ -865,7 +865,7 @@ export default function App() {
 
       {isMobileMenuOpen && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden animate-in fade-in" onClick={() => setIsMobileMenuOpen(false)}></div>}
 
-      <aside className={`no-print fixed inset-y-0 left-0 z-50 p-[0.6vw] bg-[var(--bg-page)] flex flex-col h-screen transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 overflow-visible ${isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
+      <aside className={`no-print fixed inset-y-0 left-0 z-[9999] p-[0.6vw] bg-[var(--bg-page)] flex flex-col h-screen transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 overflow-visible ${isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
         <div className="h-10 flex items-center justify-center shrink-0">
           <div className="w-[39px] h-[39px] rounded-xl flex items-center justify-center shrink-0 transition-all overflow-hidden">
             <img src={LogoImg} className="w-full h-full object-cover" alt="Logo" />
