@@ -865,7 +865,7 @@ export default function App() {
 
       {isMobileMenuOpen && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden animate-in fade-in" onClick={() => setIsMobileMenuOpen(false)}></div>}
 
-      <aside className={`no-print fixed inset-y-0 left-0 z-50 p-[0.6vw] bg-[var(--bg-page)] flex flex-col h-screen transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
+      <aside className={`no-print fixed inset-y-0 left-0 z-50 p-[0.6vw] bg-[var(--bg-page)] flex flex-col h-screen transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 overflow-visible ${isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
         <div className="h-10 flex items-center justify-center shrink-0">
           <div className="w-[39px] h-[39px] rounded-xl flex items-center justify-center shrink-0 transition-all overflow-hidden">
             <img src={LogoImg} className="w-full h-full object-cover" alt="Logo" />
@@ -878,16 +878,18 @@ export default function App() {
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto hide-scrollbar py-2">
+        <div className="flex-1 py-2">
           <div className="space-y-2 w-full">
             <button onClick={() => mudarAba('dashboard')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'dashboard' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
                 <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'dashboard' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
               <Home size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+              <div className="sidebar-pill">Dashboard</div>
             </button>
 
             <button onClick={() => mudarAba('agenda')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'agenda' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
                 <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'agenda' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
               <Calendar size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+              <div className="sidebar-pill">Agenda</div>
             </button>
 
             <button onClick={() => mudarAba('feed')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'feed' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
@@ -896,27 +898,33 @@ export default function App() {
                 <Inbox size={18} className="shrink-0 transition-transform group-hover:scale-110" />
                 {hasUnreadFeed && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#8D3046] rounded-full animate-pulse shadow-[0_0_8px_0_#8D3046]"></div>}
               </div>
+              <div className="sidebar-pill">Feed</div>
             </button>
 
             <div className="transition-all relative group">
-              <button onClick={() => setIsGestaoOpen(!isGestaoOpen)} className={`w-full flex items-center justify-center py-3.5 transition-all relative cursor-pointer ${isGestaoActive ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+              <button onClick={() => setIsGestaoOpen(!isGestaoOpen)} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${isGestaoActive ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
                   <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${isGestaoActive ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
                 <Activity size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+                <div className="sidebar-pill">Empréstimos</div>
               </button>
 
               {isGestaoOpen && (
                 <div className="flex flex-col items-center gap-3 mt-2 pb-4 pt-2">
-                  <button onClick={() => mudarAba('estoque')} className={`w-full flex items-center justify-center py-3 transition-all cursor-pointer hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl ${abaAtiva === 'estoque' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`} title="Estoque Físico">
+                  <button onClick={() => mudarAba('estoque')} className={`w-full flex items-center justify-center py-3 transition-all relative group cursor-pointer hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl ${abaAtiva === 'estoque' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`}>
                     <div className={`rounded-sm bg-[#254E70] shrink-0 w-2 h-2 ${abaAtiva === 'estoque' ? 'shadow-[0_0_8px_0_#254E70]' : ''}`}></div>
+                    <div className="sidebar-pill">Estoque</div>
                   </button>
-                  <button onClick={() => mudarAba('saidas')} className={`w-full flex items-center justify-center py-3 transition-all cursor-pointer hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl ${abaAtiva === 'saidas' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`} title="Registrar Saída">
+                  <button onClick={() => mudarAba('saidas')} className={`w-full flex items-center justify-center py-3 transition-all relative group cursor-pointer hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl ${abaAtiva === 'saidas' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`}>
                     <div className={`rounded-sm bg-[#8D3046] shrink-0 w-2 h-2 ${abaAtiva === 'saidas' ? 'shadow-[0_0_8px_0_#8D3046]' : ''}`}></div>
+                    <div className="sidebar-pill">Saídas</div>
                   </button>
-                  <button onClick={() => mudarAba('entradas')} className={`w-full flex items-center justify-center py-3 transition-all cursor-pointer hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl ${abaAtiva === 'entradas' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`} title="Baixar Devolução">
+                  <button onClick={() => mudarAba('entradas')} className={`w-full flex items-center justify-center py-3 transition-all relative group cursor-pointer hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl ${abaAtiva === 'entradas' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`}>
                     <div className={`rounded-sm bg-[#254E70] shrink-0 w-2 h-2 ${abaAtiva === 'entradas' ? 'shadow-[0_0_8px_0_#254E70]' : ''}`}></div>
+                    <div className="sidebar-pill">Entradas</div>
                   </button>
-                  <button onClick={() => mudarAba('calendario')} className={`w-full flex items-center justify-center py-3 transition-all cursor-pointer hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl ${abaAtiva === 'calendario' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`} title="Calendário de Empréstimos">
+                  <button onClick={() => mudarAba('calendario')} className={`w-full flex items-center justify-center py-3 transition-all relative group cursor-pointer hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl ${abaAtiva === 'calendario' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`}>
                     <div className={`rounded-sm bg-[#8D3046] shrink-0 w-2 h-2 ${abaAtiva === 'calendario' ? 'shadow-[0_0_8px_0_#8D3046]' : ''}`}></div>
+                    <div className="sidebar-pill">Reservas</div>
                   </button>
                 </div>
               )}
@@ -925,11 +933,13 @@ export default function App() {
             <button onClick={() => mudarAba('chamados_externos')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'chamados_externos' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
                 <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'chamados_externos' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
               <LayoutGrid size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+              <div className="sidebar-pill">Chamados</div>
             </button>
 
             <button onClick={() => mudarAba('impressoras')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'impressoras' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
                 <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'impressoras' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
               <Printer size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+              <div className="sidebar-pill">Impressoras</div>
             </button>
 
             <button onClick={() => mudarAba('bot_conhecimento')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'bot_conhecimento' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
@@ -938,11 +948,13 @@ export default function App() {
                 <MessageSquare size={18} className="shrink-0 transition-transform group-hover:scale-110" />
                 <Sparkles size={10} className="absolute -top-1.5 -right-1.5 text-[#254E70] animate-pulse" strokeWidth={3} />
               </div>
+              <div className="sidebar-pill">Conhecimento</div>
             </button>
 
             <button onClick={() => mudarAba('relatorios')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'relatorios' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
                 <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#8D3046] shadow-[0_0_12_rgba(141,48,70,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'relatorios' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
               <FileText size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+              <div className="sidebar-pill">Relatórios</div>
             </button>
           </div>
         </div>
@@ -964,7 +976,7 @@ export default function App() {
               </div>
             )}
 
-            <button onClick={() => setMenuPerfilPopoverAberto(!menuPerfilPopoverAberto)} className={`w-full flex items-center justify-center hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 transition-all rounded-xl ${menuPerfilPopoverAberto ? 'bg-[var(--bg-soft)] dark:bg-[var(--bg-card)]/5' : ''}`}>
+            <button onClick={() => setMenuPerfilPopoverAberto(!menuPerfilPopoverAberto)} className={`w-full flex items-center justify-center hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 transition-all rounded-xl relative group ${menuPerfilPopoverAberto ? 'bg-[var(--bg-soft)] dark:bg-[var(--bg-card)]/5' : ''}`}>
               <div className="flex items-center justify-center overflow-hidden">
                 {getFotoPerfilUrl() ? (
                   <img src={getFotoPerfilUrl()} alt="Avatar" className="w-9 h-9 rounded-xl object-cover shrink-0 transition-all" />
@@ -974,6 +986,7 @@ export default function App() {
                   </div>
                 )}
               </div>
+              <div className="sidebar-pill">Perfil</div>
             </button>
           </div>
         </div>
