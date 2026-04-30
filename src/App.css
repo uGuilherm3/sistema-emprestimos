@@ -466,7 +466,7 @@ input::-webkit-inner-spin-button {
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
 }
 
-.group:hover .sidebar-pill {
+.group:hover > .sidebar-pill {
   opacity: 1 !important;
   transform: translateX(0) !important;
   visibility: visible !important;
