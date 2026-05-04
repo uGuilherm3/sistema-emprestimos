@@ -31,7 +31,7 @@ export const logAction = async (action, details = {}) => {
        // Se tivermos salvo o nome no login, poderíamos usar. 
        // Por enquanto, usamos o ID ou um marcador.
     } else {
-       const { data: profile } = await supabase.from('perfil').select('username').eq('id', userId).single();
+       const { data: profile } = await supabase.from('users').select('username').eq('id', userId).single();
        if (profile) username = profile.username;
     }
   }

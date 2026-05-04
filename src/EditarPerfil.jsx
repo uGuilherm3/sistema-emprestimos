@@ -14,7 +14,7 @@ export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
   const [listaUsuarios, setListaUsuarios] = useState([]);
   const [usuarioEspelho, setUsuarioEspelho] = useState(null);
   const [modoEdicaoAdmin, setModoEdicaoAdmin] = useState(false);
-  const isAdmin = usuarioAtual?.get('adm') === true;
+  const isAdmin = usuarioAtual?.get('tipoUsuario') === 'adm';
 
   const wrapUser = (perfil) => {
     if (!perfil) return null;
@@ -29,7 +29,6 @@ export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
         if (field === 'email') return perfil.email;
         if (field === 'pin') return perfil.pin;
         if (field === 'senha_pin') return perfil.pin;
-        if (field === 'adm') return perfil.adm;
         if (field === 'foto_perfil') return { url: () => perfil.foto_perfil };
         return perfil[field];
       },
@@ -41,7 +40,7 @@ export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
     const fetchUsuarios = async () => {
       if (isAdmin) {
         const { data, error } = await supabase
-          .from('perfil')
+          .from('users')
           .select('*')
           .order('username', { ascending: true });
         if (!error && data) setListaUsuarios(data);
@@ -112,10 +111,9 @@ export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
       if (publicUrl) updates.foto_perfil = publicUrl;
       if (perfilForm.newPassword) updates.pin = perfilForm.newPassword;
 
-      const { data: perfilData, error } = await supabase.from('perfil').update(updates).eq('id', targetUserId).select().single();
+      // Atualiza os dados do usuário na tabela unificada 'users'
+      const { data: perfilData, error } = await supabase.from('users').update(updates).eq('id', targetUserId).select().single();
       if (error) throw error;
-
-      await supabase.from('colaborador').update({ nome: perfilForm.nome.trim(), setor: perfilForm.setor.trim().toUpperCase() }).eq('id', targetUserId);
 
       setSucessoUpdate(true);
       setPerfilForm(prev => ({ ...prev, newPassword: '', confirmPassword: '' }));

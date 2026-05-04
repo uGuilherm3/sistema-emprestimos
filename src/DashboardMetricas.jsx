@@ -81,7 +81,7 @@ const DashboardMetricas = React.memo(({ triggerAtualizacao, usuarioAtual, onOpen
         hoje.setHours(0, 0, 0, 0);
 
         const [resUsers, resLogs, resProbeEmp, resProbeLog] = await Promise.all([
-          supabase.from('perfil').select('*').neq('tipo_usuario', 'solicitante').limit(200),
+          supabase.from('users').select('*').neq('tipo_usuario', 'solicitante').limit(200),
           supabase.from('log_auditoria').select('*').gte('created_at', hoje.toISOString()).order('created_at', { ascending: false }).limit(14),
           supabase.from('emprestimo').select('updated_at').order('updated_at', { ascending: false }).limit(1).single(),
           supabase.from('log_auditoria').select('created_at').order('created_at', { ascending: false }).limit(1).single()

@@ -9,7 +9,7 @@ import { generateAndUploadPDF } from './utils/pdfArchive';
 import VoucherPreview from './VoucherPreview';
 import { useRef } from 'react';
 
-export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, onLoginSucesso, isDarkMode, setIsDarkMode }) {
+export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, onLoginSucesso, isDarkMode, setIsDarkMode, isEmbedded = false, externalAba, setExternalAba }) {
   const [viewMode, setViewMode] = useState('login'); 
   const [loadingAuth, setLoadingAuth] = useState(false);
   const [erroAuth, setErroAuth] = useState('');
@@ -22,7 +22,9 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
   const [setor, setSetor] = useState(''); 
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const [abaPortal, setAbaPortal] = useState('catalogo'); 
+  const [abaPortalInterna, setAbaPortalInterna] = useState('catalogo');
+  const abaPortal = externalAba || abaPortalInterna;
+  const setAbaPortal = setExternalAba || setAbaPortalInterna;
   const [itens, setItens] = useState([]);
   const [ativosGlobais, setAtivosGlobais] = useState([]);
   const [reservasGlobais, setReservasGlobais] = useState([]);
@@ -111,7 +113,7 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
     try {
       // Login Simplificado: Busca na tabela PERFIL por username ou email + pin
       const { data: profile, error } = await supabase
-        .from('perfil')
+        .from('users')
         .select('*')
         .or(`username.eq."${userToLogin}",email.eq."${userToLogin}"`)
         .eq('pin', password.trim())
@@ -144,7 +146,7 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
     try {
       // 1. Verificar se o username ou email já existem
       const { data: existente } = await supabase
-        .from('perfil')
+        .from('users')
         .select('id')
         .or(`username.eq."${username.trim().toLowerCase()}",email.eq."${email.trim().toLowerCase()}"`)
         .maybeSingle();
@@ -154,9 +156,9 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
         return;
       }
 
-      // 2. Criar Perfil diretamente (IDs aleatórios)
-      const { data: novoPerfil, error: errorPerfil } = await supabase
-        .from('perfil')
+      // 2. Criar o usuário diretamente na tabela unificada 'users'
+      const { error: errorPerfil } = await supabase
+        .from('users')
         .insert([{
           id: crypto.randomUUID(),
           username: username.trim().toLowerCase(),
@@ -168,16 +170,8 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
         .select()
         .single();
 
+      // Tabela 'users' é unificada — não há mais necessidade de espelhar em 'colaborador'
       if (errorPerfil) throw errorPerfil;
-
-      // 3. Espelhar na tabela Colaborador
-      const { error: errorColab } = await supabase.from('colaborador').insert({
-        id: novoPerfil.id,
-        nome: username.trim(),
-        setor: setor.trim().toUpperCase()
-      });
-
-      if (errorColab) throw errorColab;
 
       setSucessoAuth('Conta criada com sucesso! Faça login.');
       setTimeout(() => { setViewMode('login'); setPassword(''); setConfirmPassword(''); }, 2000);
@@ -308,7 +302,7 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
     } catch (error) { console.error("Erro ao buscar histórico:", error); } finally { setLoadingHistorico(false); }
   };
 
-  useEffect(() => { if (abaPortal === 'historico') fetchHistorico(); }, [abaPortal, usuarioAtual]);
+  useEffect(() => { if (abaPortal === 'historico' || abaPortal === 'dashboard') fetchHistorico(); }, [abaPortal, usuarioAtual]);
 
   const handleAssinaturaEletronica = async (tipo, terceiro) => {
     if (!pedidoSelecionado || !usuarioAtual) return;
@@ -643,7 +637,7 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
   // RENDER DO SEU PEDIDO
   // ==========================================
   const renderSeuPedido = (isStacked = false) => (
-    <div className={`flex flex-col transition-colors duration-300 ${isStacked ? 'bg-transparent border-none shadow-none flex-1 h-full' : 'bg-[var(--bg-card)] rounded-[2.5rem] sticky top-24 overflow-y-auto custom-scrollbar'}`} style={!isStacked ? {maxHeight: 'calc(100vh - 120px)'} : {}}>
+    <div className={`flex flex-col transition-colors duration-300 ${isStacked ? 'bg-transparent border-none shadow-none flex-1 h-full' : 'bg-[var(--bg-card)] rounded-[2.5rem] overflow-y-auto custom-scrollbar'} ${!isStacked ? (isEmbedded ? 'sticky top-4' : 'sticky top-24') : ''}`} style={!isStacked ? {maxHeight: 'calc(100vh - 120px)'} : {}}>
       <div className={`${isStacked ? 'p-6 pb-2' : 'p-8 pb-4'} shrink-0`}>
         <div className="mb-0 pb-4 flex justify-between items-center">
           <div>
@@ -755,42 +749,45 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
   return (
     <div className="min-h-screen bg-[var(--bg-page)] text-slate-900 dark:text-[#F8FAFC] selection:bg-[#10B981]/30 font-sans flex flex-col transition-colors duration-300">
       
-      <header className="h-24 flex items-center justify-between px-6 lg:px-12 shrink-0 bg-[var(--bg-page)]/70 backdrop-blur-xl sticky top-0 z-50 no-print">
-        <div className="flex items-center gap-10">
-          <div className="flex items-center gap-3">
-            {onVoltar && <button onClick={onVoltar} className="p-2 bg-slate-200 dark:bg-[var(--bg-card)]/10 rounded-xl text-slate-600 dark:text-white hover:bg-slate-300 dark:hover:bg-[var(--bg-card)]/20 transition-colors mr-2"><ArrowLeft size={16}/></button>}
-            <div className="w-10 h-10 bg-slate-900 dark:bg-white rounded-xl flex items-center justify-center shrink-0 shadow-lg"><span className="text-white dark:text-black font-black text-xs italic">TI</span></div>
-            <div className="hidden sm:block">
-               <span className="text-xl font-black tracking-tight text-slate-900 dark:text-white block leading-none">TI LEND.</span>
-               <span className="text-[9px] font-bold text-[#10B981] uppercase tracking-widest">Portal Colaborador</span>
+      {!isEmbedded && (
+        <header className="h-24 flex items-center justify-between px-6 lg:px-12 shrink-0 bg-[var(--bg-page)]/70 backdrop-blur-xl sticky top-0 z-50 no-print">
+          <div className="flex items-center gap-10">
+            <div className="flex items-center gap-3">
+              {onVoltar && <button onClick={onVoltar} className="p-2 bg-slate-200 dark:bg-[var(--bg-card)]/10 rounded-xl text-slate-600 dark:text-white hover:bg-slate-300 dark:hover:bg-[var(--bg-card)]/20 transition-colors mr-2"><ArrowLeft size={16}/></button>}
+              <div className="w-10 h-10 bg-slate-900 dark:bg-white rounded-xl flex items-center justify-center shrink-0 shadow-lg"><span className="text-white dark:text-black font-black text-xs italic">TI</span></div>
+              <div className="hidden sm:block">
+                 <span className="text-xl font-black tracking-tight text-slate-900 dark:text-white block leading-none">TI LEND.</span>
+                 <span className="text-[9px] font-bold text-[#10B981] uppercase tracking-widest">Portal Colaborador</span>
+              </div>
+            </div>
+
+            <div className="flex bg-[var(--bg-soft)]  p-1.5 rounded-[1.25rem]">
+               <button onClick={() => setAbaPortal('catalogo')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${abaPortal === 'catalogo' ? 'bg-[var(--bg-card)]  text-slate-900 dark:text-[#10B981]' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`}>
+                   <LayoutGrid size={14} /> Catálogo
+               </button>
+               <button onClick={() => setAbaPortal('historico')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${abaPortal === 'historico' ? 'bg-[var(--bg-card)]  text-slate-900 dark:text-[#10B981]' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`}>
+                   <List size={14} /> Meus Pedidos
+               </button>
             </div>
           </div>
-
-          <div className="flex bg-[var(--bg-soft)]  p-1.5 rounded-[1.25rem]">
-             <button onClick={() => setAbaPortal('catalogo')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${abaPortal === 'catalogo' ? 'bg-[var(--bg-card)]  text-slate-900 dark:text-[#10B981]' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`}>
-                 <LayoutGrid size={14} /> Catálogo
-             </button>
-             <button onClick={() => setAbaPortal('historico')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${abaPortal === 'historico' ? 'bg-[var(--bg-card)]  text-slate-900 dark:text-[#10B981]' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`}>
-                 <List size={14} /> Meus Pedidos
-             </button>
+          
+          <div className="flex items-center gap-4 sm:gap-6">
+              <div className="hidden lg:block text-right border-r border-slate-200 dark:border-white/10 pr-6">
+                 <p className="text-xs font-bold text-slate-900 dark:text-white uppercase">{usuarioAtual.get('username')}</p>
+                 <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-[#606060] mt-1">{usuarioAtual.get('setor') || 'Sem Setor'}</p>
+              </div>
+              <button onClick={() => setIsDarkMode(!isDarkMode)} className="text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white transition-colors p-2">
+                 {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
+              <button onClick={onLogout} className="flex items-center gap-2 p-2.5 bg-red-50 dark:bg-[#8D3046]/10 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-[#8D3046]/20 transition-colors" title="Sair da Conta">
+                 <LogOut size={16} />
+              </button>
           </div>
-        </div>
-        
-        <div className="flex items-center gap-4 sm:gap-6">
-            <div className="hidden lg:block text-right border-r border-slate-200 dark:border-white/10 pr-6">
-               <p className="text-xs font-bold text-slate-900 dark:text-white uppercase">{usuarioAtual.get('username')}</p>
-               <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-[#606060] mt-1">{usuarioAtual.get('setor') || 'Sem Setor'}</p>
-            </div>
-            <button onClick={() => setIsDarkMode(!isDarkMode)} className="text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white transition-colors p-2">
-               {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-            <button onClick={onLogout} className="flex items-center gap-2 p-2.5 bg-red-50 dark:bg-[#8D3046]/10 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-[#8D3046]/20 transition-colors" title="Sair da Conta">
-               <LogOut size={16} />
-            </button>
-        </div>
-      </header>
+        </header>
+      )}
 
-      <main className="flex-1 p-2 sm:p-4 lg:p-10 pt-0 sm:pt-0 lg:pt-0 max-w-[1750px] w-full mx-auto relative no-print">
+      <main className={`flex-1 relative no-print ${isEmbedded ? 'p-0 pb-10' : 'p-2 sm:p-4 lg:p-10 pt-0 sm:pt-0 lg:pt-0 max-w-[1750px] w-full mx-auto'}`}>
+
         
         {alertasCobranca.length > 0 && abaPortal === 'catalogo' && (
           <div className="mb-8 space-y-4">
@@ -938,6 +935,79 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
               )}
             </div>
         )}
+
+        {abaPortal === 'dashboard' && (() => {
+          const disponiveis = itens.filter(i => (Number(i.quantidade_disponivel) || 0) > 0).length;
+          const ativos = meusPedidos.filter(p => p.status === 'Aberto').length;
+          const agendados = meusPedidos.filter(p => p.status === 'Aprovado').length;
+          const concluidos = meusPedidos.filter(p => p.status === 'Devolvido').length;
+          const pendentes = meusPedidos.filter(p => p.status === 'Pendente').length;
+          const recentes = meusPedidos.slice(0, 5);
+
+          const statusConfig = {
+            'Aberto': { label: 'Ativo', color: '#254E70', bg: '#254E7018' },
+            'Aprovado': { label: 'Aprovado', color: '#10B981', bg: '#10B98118' },
+            'Pendente': { label: 'Pendente', color: '#F59E0B', bg: '#F59E0B18' },
+            'Devolvido': { label: 'Devolvido', color: '#6B7280', bg: '#6B728018' },
+          };
+
+          const cards = [
+            { label: 'Itens Disponíveis', value: disponiveis, color: '#10B981', sub: 'No catálogo agora' },
+            { label: 'Meus Empréstimos', value: ativos, color: '#254E70', sub: 'Atualmente em uso' },
+            { label: 'Agendamentos', value: agendados, color: '#7C3AED', sub: 'Aprovados para retirada' },
+            { label: 'Concluídos', value: concluidos + pendentes, color: '#6B7280', sub: `${pendentes} pendente${pendentes !== 1 ? 's' : ''}` },
+          ];
+
+          return (
+            <div className="animate-in fade-in duration-500 space-y-6">
+              <div className="bg-[var(--bg-card)] p-8 rounded-[2.5rem] transition-colors duration-300">
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Dashboard</h1>
+                <p className="text-xs text-slate-500 dark:text-[#606060] mt-1 font-medium">Visão geral das suas solicitações e do catálogo.</p>
+              </div>
+
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+                {cards.map(card => (
+                  <div key={card.label} className="bg-[var(--bg-card)] rounded-2xl p-5 border border-slate-100 dark:border-[#1e1e1e] transition-colors duration-300">
+                    <div className="w-2 h-2 rounded-full mb-4" style={{ backgroundColor: card.color }} />
+                    <p className="text-2xl font-black text-slate-900 dark:text-white">{card.value}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-[#606060] mt-1">{card.label}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-[#505050] mt-1">{card.sub}</p>
+                  </div>
+                ))}
+              </div>
+
+              {recentes.length > 0 && (
+                <div className="bg-[var(--bg-card)] rounded-2xl border border-slate-100 dark:border-[#1e1e1e] overflow-hidden transition-colors duration-300">
+                  <div className="px-6 py-4 border-b border-slate-50 dark:border-[#181818]">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">Solicitações Recentes</p>
+                  </div>
+                  <div className="divide-y divide-slate-50 dark:divide-[#181818]">
+                    {recentes.map(pedido => {
+                      const cfg = statusConfig[pedido.status] || { label: pedido.status, color: '#6B7280', bg: '#6B728018' };
+                      return (
+                        <div key={pedido.id} className="px-6 py-3.5 flex items-center justify-between gap-4 hover:bg-[var(--bg-soft)] transition-colors">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-bold text-slate-700 dark:text-[#A0A0A0] uppercase truncate">{pedido.itemNome}</p>
+                            {pedido.itemModelo && <p className="text-[10px] text-slate-400 dark:text-[#606060]">{pedido.itemModelo}</p>}
+                          </div>
+                          <span className="text-[9px] font-black uppercase px-2.5 py-1 rounded-full shrink-0" style={{ backgroundColor: cfg.bg, color: cfg.color }}>
+                            {cfg.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {loadingHistorico && (
+                <div className="flex justify-center py-10">
+                  <div className="w-7 h-7 border-4 border-[#10B981] border-t-transparent rounded-[10px] animate-spin" />
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {abaPortal === 'historico' && (
             <div className="animate-in fade-in duration-500 max-w-5xl mx-auto h-full flex flex-col">

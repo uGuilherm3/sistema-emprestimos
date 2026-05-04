@@ -91,7 +91,7 @@ export default function CalendarioAgendamentos({ itensDisponiveis, onOpenDetails
 
   const fetchColaboradores = async () => {
     try {
-      const { data } = await supabase.from('colaborador').select('*').order('nome', { ascending: true });
+      const { data } = await supabase.from('users').select('*').order('nome', { ascending: true });
       setColaboradores((data || []).map(o => wrap(o)));
     } catch (e) { console.error(e); }
   };
@@ -101,7 +101,7 @@ export default function CalendarioAgendamentos({ itensDisponiveis, onOpenDetails
 
   const handleAddColaborador = async () => {
     try {
-      const { error } = await supabase.from('colaborador').insert({
+      const { error } = await supabase.from('users').insert({
         id: crypto.randomUUID(),
         nome: buscaColab.trim(),
         setor: setorNovo.trim().toUpperCase()
@@ -126,7 +126,7 @@ export default function CalendarioAgendamentos({ itensDisponiveis, onOpenDetails
   const salvarEdicaoColab = async (e, id) => {
     e.stopPropagation();
     try {
-      const { error } = await supabase.from('colaborador').update({
+      const { error } = await supabase.from('users').update({
         nome: editNomeColab.trim(),
         setor: editSetorColab.trim().toUpperCase()
       }).eq('id', id);
@@ -144,7 +144,7 @@ export default function CalendarioAgendamentos({ itensDisponiveis, onOpenDetails
     e.stopPropagation();
     if (!window.confirm('Excluir este colaborador salvo?')) return;
     try {
-      const { error } = await supabase.from('colaborador').delete().eq('id', id);
+      const { error } = await supabase.from('users').delete().eq('id', id);
       if (error) throw error;
       fetchColaboradores();
     } catch (err) { alert(err.message); }
@@ -270,7 +270,7 @@ export default function CalendarioAgendamentos({ itensDisponiveis, onOpenDetails
 
     try {
       const userId = localStorage.getItem('tilend_user_id');
-      const { data: userProfile } = await supabase.from('perfil').select('*').eq('id', userId).single();
+      const { data: userProfile } = await supabase.from('users').select('*').eq('id', userId).single();
       if (!userProfile) throw new Error('Sessão expirada. Faça login novamente.');
 
       const [hora, minuto] = horaReserva.split(':');
@@ -450,7 +450,7 @@ Chamado gerado automaticamente pela Agenda do Sistema.
   const executarSaidaComAssinatura = async (agGroup, nomeResponsavel, textoAssinatura) => {
     try {
       const userId = localStorage.getItem('tilend_user_id');
-      const { data: userProfile } = await supabase.from('perfil').select('username').eq('id', userId).single();
+      const { data: userProfile } = await supabase.from('users').select('username').eq('id', userId).single();
 
       const idsEfetuados = [];
       const idsAgendas = [];
@@ -497,7 +497,7 @@ Chamado gerado automaticamente pela Agenda do Sistema.
 
   const executarDevolucaoComAssinatura = async (empGroup, nomeResponsavel, textoAssinatura) => {
     try {
-      const { data: userProfile } = await supabase.from('perfil').select('username').eq('id', localStorage.getItem('tilend_user_id')).single();
+      const { data: userProfile } = await supabase.from('users').select('username').eq('id', localStorage.getItem('tilend_user_id')).single();
 
       for (const emp of empGroup.itens) {
         const { data: itemBanco } = await supabase.from('item').select('id, quantidade').eq('id', emp.item_id).single();
@@ -1136,7 +1136,7 @@ Chamado gerado automaticamente pela Agenda do Sistema.
       )}
 
       {/* ========================================================= */}
-      {/* MODAL DE DETALHE UNIFICADO (ESTILO FEEDRESUMO)            */}
+      {/* MODAL DE DETALHE UNIFICADO */}
       {/* ========================================================= */}
       {detalheAprovacao && (() => {
         const isEmp = detalheItemTipo === 'emprestimo';

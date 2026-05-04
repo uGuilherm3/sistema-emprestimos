@@ -25,7 +25,7 @@ import {
 const AgendaEstiloGoogle = ({ usuarioAtual }) => {
   // SIMULAÇÃO DE USUÁRIO LOGADO (Agora vindo das props se disponível)
   const currentUser = usuarioAtual?.get('username') || 'Guilherme';
-  const isAdmin = usuarioAtual?.get('adm') === true;
+  const isAdmin = usuarioAtual?.get('tipoUsuario') === 'adm';
 
   const getFotoPerfilUrl = () => {
     if (!usuarioAtual) return null;
@@ -265,7 +265,7 @@ const AgendaEstiloGoogle = ({ usuarioAtual }) => {
   // BUSCAR PERFIS DOS TÉCNICOS (Para fotos de responsáveis)
   const fetchPerfis = async () => {
     try {
-      const { data } = await supabase.from('perfil').select('username, foto_perfil');
+      const { data } = await supabase.from('users').select('username, foto_perfil');
       if (data) {
         const map = {};
         data.forEach(p => {

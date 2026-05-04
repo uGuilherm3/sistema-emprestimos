@@ -41,14 +41,14 @@ export default function NovoEmprestimo({ itensDisponiveis, onEmprestimoRealizado
 
   const fetchColaboradores = async () => {
     try {
-      const { data } = await supabase.from('colaborador').select('*').order('nome', { ascending: true });
+      const { data } = await supabase.from('users').select('*').order('nome', { ascending: true });
       setColaboradores(data || []);
     } catch (e) { console.error('Erro ao carregar colaboradores:', e); }
   };
 
   const handleAddColaborador = async () => {
     try {
-      const { error } = await supabase.from('colaborador').insert({
+      const { error } = await supabase.from('users').insert({
         id: crypto.randomUUID(),
         nome: buscaColab.trim(),
         setor: setorNovo.trim().toUpperCase()
@@ -72,7 +72,7 @@ export default function NovoEmprestimo({ itensDisponiveis, onEmprestimoRealizado
   const salvarEdicaoColab = async (e, id) => {
     e.stopPropagation();
     try {
-      const { error } = await supabase.from('colaborador').update({
+      const { error } = await supabase.from('users').update({
         nome: editNomeColab.trim(),
         setor: editSetorColab.trim().toUpperCase()
       }).eq('id', id);
@@ -90,7 +90,7 @@ export default function NovoEmprestimo({ itensDisponiveis, onEmprestimoRealizado
     e.stopPropagation();
     if (!window.confirm('Excluir este colaborador salvo?')) return;
     try {
-      const { error } = await supabase.from('colaborador').delete().eq('id', id);
+      const { error } = await supabase.from('users').delete().eq('id', id);
       if (error) throw error;
       fetchColaboradores();
     } catch (err) { alert(err.message); }

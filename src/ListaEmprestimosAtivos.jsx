@@ -92,7 +92,7 @@ export default function ListaEmprestimosAtivos({ triggerAtualizacao, onDevolucao
   const executarDevolucaoComAssinatura = async (grupo, nomeResponsavel, textoAssinatura, agoraPre) => {
     logAction('Receber Pedido (Lista) - Início', { grupoId: grupo.id, solicitante: grupo.solicitante });
     try {
-      const { data: userProfile } = await supabase.from('perfil').select('username').eq('id', localStorage.getItem('tilend_user_id')).single();
+      const { data: userProfile } = await supabase.from('users').select('username').eq('id', localStorage.getItem('tilend_user_id')).single();
       if (!userProfile) throw new Error('Sessão expirada.');
 
       // ⏱️ Hora exata do recebimento — usa o timestamp passado pelo confirmarHandover

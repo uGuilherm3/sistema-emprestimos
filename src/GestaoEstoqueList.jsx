@@ -111,11 +111,10 @@ export default function GestaoEstoqueList({ itens, onItemEditadoOrExcluido, onRe
 
   const grupos = {};
   itensFiltrados.forEach(item => {
-    const chave = `${item.nome_equipamento}||${item.modelo_detalhes || ''}`;
+    const chave = (item.nome_equipamento || '').trim().toUpperCase();
     if (!grupos[chave]) {
       grupos[chave] = {
         nome: item.nome_equipamento,
-        modelo: item.modelo_detalhes,
         itens: [],
         emUsoTotal: 0,
         fisicoTotal: 0,
@@ -205,6 +204,8 @@ export default function GestaoEstoqueList({ itens, onItemEditadoOrExcluido, onRe
                   const grupo = grupos[chave];
                   const isExpandido = gruposExpandidos.includes(chave);
                   const temVarios = grupo.itens.length > 1;
+                  const modelos = [...new Set(grupo.itens.map(i => i.modelo_detalhes).filter(Boolean))];
+                  const modeloDisplay = modelos.length === 1 ? modelos[0] : '-';
 
                   return (
                     <React.Fragment key={chave}>
@@ -230,7 +231,7 @@ export default function GestaoEstoqueList({ itens, onItemEditadoOrExcluido, onRe
                           </div>
                         </td>
                         <td className="px-5 py-3">
-                          <span className="text-[10px] font-bold text-slate-500 dark:text-[#A0A0A0] uppercase">{grupo.modelo || '-'}</span>
+                          <span className="text-[10px] font-bold text-slate-500 dark:text-[#A0A0A0] uppercase">{modeloDisplay}</span>
                         </td>
                         <td className="px-4 py-3">
                           <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-[#606060]">
@@ -278,7 +279,11 @@ export default function GestaoEstoqueList({ itens, onItemEditadoOrExcluido, onRe
                                 <span className="text-[11px] font-bold text-slate-500 uppercase">Unidade #{idx + 1}</span>
                               </div>
                             </td>
-                            <td className="px-5 py-2"></td>
+                            <td className="px-5 py-2">
+                              {item.modelo_detalhes && (
+                                <span className="text-[10px] font-bold text-slate-500 dark:text-[#A0A0A0] uppercase">{item.modelo_detalhes}</span>
+                              )}
+                            </td>
                             <td className="px-4 py-2">
                               <div className="flex items-center gap-2">
                                 <span className="text-[10px] font-mono font-black text-[#254E70] px-2 py-0.5 bg-[#254E70]/5 rounded">

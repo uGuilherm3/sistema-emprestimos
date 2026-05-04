@@ -253,7 +253,7 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
       const agora = new Date();
       const textoAssinatura = `EQUIPAMENTO RETIRADO E TERMO ASSINADO POR AGENTE EM CONJUNTO COM ${nomeResponsavel.toUpperCase()} EM ${agora.toLocaleDateString('pt-BR')} ÀS ${agora.toLocaleTimeString('pt-BR')}`;
 
-      const { data: userProfile } = await supabase.from('perfil').select('username').eq('id', localStorage.getItem('tilend_user_id')).single();
+      const { data: userProfile } = await supabase.from('users').select('username').eq('id', localStorage.getItem('tilend_user_id')).single();
 
       for (const emp of itens) {
         await supabase.from('emprestimo').update({
@@ -289,7 +289,7 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
       const agora = new Date();
       const textoAssinatura = `TERMO DE DEVOLUÇÃO ASSINADO POR AGENTE EM CONJUNTO COM ${nomeResponsavel.toUpperCase()} EM ${agora.toLocaleDateString('pt-BR')} ÀS ${agora.toLocaleTimeString('pt-BR')}`;
 
-      const { data: userProfile } = await supabase.from('perfil').select('username').eq('id', localStorage.getItem('tilend_user_id')).single();
+      const { data: userProfile } = await supabase.from('users').select('username').eq('id', localStorage.getItem('tilend_user_id')).single();
       const retornoDate = agora.toISOString();
 
       logAction('Devolução via Detalhes - Início', { protocolo: dados.protocolo });

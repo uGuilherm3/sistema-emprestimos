@@ -1,16 +1,16 @@
 // src/App.jsx
+// Componente raiz do sistema TI Lend.
+// Controla: autenticação, layout da sidebar, roteamento entre módulos e tema claro/escuro.
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from './utils/supabaseClient';
 import {
   Home, Activity, CalendarDays, FileText, Settings,
   Search, Bell, LogOut,
   ChevronUp, ChevronDown, ArrowUpRight, ArrowDownLeft, X, Trash2,
-  Menu, Sun, Moon, Globe, Inbox, AlertTriangle, ArrowRight, ArrowLeft, CheckCircle2, ListChecks, Music, LayoutGrid, Printer, MessageSquare, Sparkles, Calendar
+  Menu, Sun, Moon, Globe, Inbox, AlertTriangle, ArrowRight, ArrowLeft, CheckCircle2, ListChecks, Music, LayoutGrid, Printer, MessageSquare, Sparkles, Calendar, Laptop, ShoppingBag, FilePenLine, ScreenShare
 } from 'lucide-react';
-import Login from './Login';
 import DashboardMetricas from './DashboardMetricas';
-import FeedResumo from './FeedResumo';
 import CadastroItem from './CadastroItem';
 import GestaoEstoqueList from './GestaoEstoqueList';
 import NovoEmprestimo from './NovoEmprestimo';
@@ -26,7 +26,8 @@ import DetalhesGerencial from './DetalhesGerencial';
 import KnowledgeBot from './KnowledgeBot';
 import ChatBotIA from './components/ChatBotIA';
 import AgendaEstiloGoogle from './AgendaEstiloGoogle';
-import { fetchGLPIInventory } from './utils/glpiClient';
+import DashboardEmprestimos from './DashboardEmprestimos';
+import Login from './Login'; // Tela de login + launcher de módulos
 import LogoImg from './assets/logo.jpg';
 
 
@@ -48,27 +49,46 @@ const levenshtein = (a, b) => {
   return matrix[b.length][a.length];
 };
 
+const PERMISSIONS = {
+  default:    new Set(['agenda', 'portal', 'perfil']),
+  solicitante: new Set(['agenda', 'portal', 'perfil']),
+  tecnico:    new Set(['agenda', 'estoque', 'saidas', 'entradas', 'calendario', 'chamados_externos', 'impressoras', 'sessoes', 'bot_conhecimento', 'documentos', 'relatorios', 'portal', 'detalhes', 'perfil']),
+};
+
+const FIRST_ALLOWED_ROUTE = {
+  default: '/agenda',
+  solicitante: '/agenda',
+  tecnico: '/agenda',
+};
+
 const rotasGlobais = [
   { id: 'dashboard', nome: 'Dashboard', icon: Home, keywords: ['home', 'inicio', 'painel', 'metricas', 'resumo'] },
   { id: 'agenda', nome: 'Minha Agenda', icon: Calendar, keywords: ['agenda', 'compromissos', 'google', 'calendario', 'atividades', 'eventos'] },
-  { id: 'feed', nome: 'Feed de Operações', icon: Inbox, keywords: ['inbox', 'caixa', 'alertas', 'atrasos', 'notificacoes'] },
   { id: 'estoque', nome: 'Inventário Global', icon: Activity, keywords: ['estoque', 'produtos', 'ativos', 'cadastro', 'lista', 'adicionar'] },
-  { id: 'saidas', nome: 'Registro de Saídas', icon: ArrowUpRight, keywords: ['saida', 'saídas', 'emprestimo', 'emprestar', 'retirada', 'checkout', 'novo'] },
+  { id: 'saidas', nome: 'Registro de Saídas', icon: FilePenLine, keywords: ['saida', 'saídas', 'emprestimo', 'emprestar', 'retirada', 'checkout', 'novo'] },
   { id: 'entradas', nome: 'Gestão de Devoluções', icon: ArrowDownLeft, keywords: ['entrada', 'entradas', 'devolucao', 'devolucoes', 'receber', 'retorno'] },
   { id: 'localizacoes', nome: 'Localização por Setor', icon: Globe, keywords: ['setor', 'localizacao', 'onde está', 'posse', 'ativos por área'] },
   { id: 'calendario', nome: 'Calendários de Agendamento', icon: CalendarDays, keywords: ['agenda', 'agendamento', 'reserva', 'datas'] },
   { id: 'chamados_externos', nome: 'Chamados', icon: LayoutGrid, keywords: ['chamado', 'externo', 'ajuda', 'suporte', 'helpdesk', 'web', 'tickets'] },
   { id: 'impressoras', nome: 'Impressoras', icon: Printer, keywords: ['impressora', 'toner', 'impressao', 'papel', 'manutencao'] },
+  { id: 'sessoes', nome: 'Sessões', icon: ScreenShare, keywords: ['sessão', 'sessoes', 'remoto', 'acesso', 'pc', 'computador'] },
   { id: 'bot_conhecimento', nome: 'Bot de Conhecimento', icon: MessageSquare, keywords: ['bot', 'ia', 'ajuda', 'pesquisa', 'conhecimento', 'perguntas', 'pergunta', 'experimental'] },
   { id: 'documentos', nome: 'Arquivo de Documentos', icon: FileText, keywords: ['documento', 'termo', 'assinado', 'arquivo', 'comprovante', 'pdf', 'assinatura'] },
   { id: 'relatorios', nome: 'Inteligência e Relatórios', icon: ListChecks, keywords: ['relatorio', 'exportar', 'csv', 'dados', 'tudo', 'transacoes passadas', 'excel', 'exportação'] },
+  { id: 'portal', nome: 'Portal do Solicitante', icon: ShoppingBag, keywords: ['portal', 'solicitante', 'público', 'loja', 'pedir', 'comprar', 'reserva'] },
   { id: 'perfil', nome: 'Configurações de Conta', icon: Settings, keywords: ['perfil', 'conta', 'senha', 'ajustes', 'sair', 'foto', 'username'] },
   { id: 'dashboard#historico-dashboard', nome: 'Histórico de Transações (Dashboard)', icon: ListChecks, keywords: ['historico', 'transacoes', 'auditoria', 'quem pegou', 'quem devolveu', 'entradas e saídas', 'timeline', 'lista de emprestimos'] }
 ];
 
 export default function App() {
+  // usuarioAtual: objeto do usuário logado (null = ninguém logado)
   const [usuarioAtual, setUsuarioAtual] = useState(null);
-  const [modoPortal, setModoPortal] = useState(false);
+
+  // isLoadingAuth: true enquanto verifica se há sessão salva no localStorage.
+  // Evita piscar a tela de login antes de terminar a verificação.
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+
+  const [abaPortal, setAbaPortal] = useState('catalogo');
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -105,17 +125,11 @@ export default function App() {
     return salvos ? JSON.parse(salvos) : [];
   });
 
-  const [seenFeedIds, setSeenFeedIds] = useState(() => {
-    const salvos = localStorage.getItem('tilend_seen_feed_ids');
-    return salvos ? JSON.parse(salvos) : [];
-  });
-
   useEffect(() => { localStorage.setItem('tilend_ids_excluidos', JSON.stringify(idsExcluidos)); }, [idsExcluidos]);
   useEffect(() => { localStorage.setItem('tilend_sidebar_open', JSON.stringify(isSidebarOpen)); }, [isSidebarOpen]);
   useEffect(() => { localStorage.setItem('tilend_gestao_open', JSON.stringify(isGestaoOpen)); }, [isGestaoOpen]);
 
   const [itens, setItens] = useState([]);
-  const [hasUnreadFeed, setHasUnreadFeed] = useState(false);
   const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -444,10 +458,21 @@ export default function App() {
 
   useEffect(() => {
     const checarUsuario = async () => {
-      const idSalvo = localStorage.getItem('tilend_user_id');
+      // Lê ?tilend_uid=... da URL — usado quando vindo de outro app (sub-apps em dev)
+      const params = new URLSearchParams(window.location.search);
+      const uidFromUrl = params.get('tilend_uid');
+      if (uidFromUrl) {
+        localStorage.setItem('tilend_user_id', uidFromUrl);
+        params.delete('tilend_uid');
+        const newSearch = params.toString();
+        window.history.replaceState({}, '', window.location.pathname + (newSearch ? '?' + newSearch : ''));
+      }
+
+      const idSalvo = uidFromUrl || localStorage.getItem('tilend_user_id');
       if (idSalvo) {
+        // Busca os dados do usuário na tabela 'users' pelo ID salvo
         const { data: perfil } = await supabase
-          .from('perfil')
+          .from('users')
           .select('*')
           .eq('id', idSalvo)
           .single();
@@ -474,20 +499,26 @@ export default function App() {
             save: async () => { /* Heartbeat mock */ }
           };
           setUsuarioAtual(userMock);
+          return;
         }
+        localStorage.removeItem('tilend_user_id');
       }
+
+      // Terminou de verificar — libera a renderização (mostrará o Login se não achou usuário)
+      setIsLoadingAuth(false);
     };
     checarUsuario();
   }, []);
 
-  // HEARTBEAT: Atualiza o status "online" do usuário logado (perfil.updated_at)
+  // HEARTBEAT: Atualiza o campo updated_at do usuário a cada 15s para marcar como "online".
+  // O Dashboard usa esse timestamp para exibir quem está ativo no momento.
   useEffect(() => {
     if (!usuarioAtual) return;
 
     const heartbeat = async () => {
       try {
         await supabase
-          .from('perfil')
+          .from('users')
           .update({ updated_at: new Date().toISOString() })
           .eq('id', usuarioAtual.id);
       } catch (e) {
@@ -672,26 +703,11 @@ export default function App() {
           if (hasUnseenNotifs && !notificacoesAberto) setHasUnreadNotifs(true);
           else setHasUnreadNotifs(false);
 
-          const hasUnseenFeed = newNotifs.some(n => !seenFeedIds.includes(n.id) && !idsExcluidos.includes(n.id));
-          if (hasUnseenFeed && abaAtiva !== 'feed') setHasUnreadFeed(true);
-          else setHasUnreadFeed(false);
-
         } catch (e) { console.error(e); }
       };
       fetchData();
     }
   }, [triggerAtualizacao, usuarioAtual]);
-
-  useEffect(() => {
-    if (abaAtiva === 'feed' && notificacoes.length > 0) {
-      setHasUnreadFeed(false);
-      setSeenFeedIds(prev => {
-        const newSeen = [...new Set([...prev, ...notificacoes.map(n => n.id)])];
-        localStorage.setItem('tilend_seen_feed_ids', JSON.stringify(newSeen));
-        return newSeen;
-      });
-    }
-  }, [abaAtiva, notificacoes]);
 
   useEffect(() => {
     if (notificacoesAberto && notificacoes.length > 0) {
@@ -715,6 +731,13 @@ export default function App() {
     }
   }, [unreadCount]);
 
+  // Chamado pelo componente Login quando o usuário escolhe um módulo no launcher.
+  // Recebe o objeto do usuário e a rota escolhida, seta o estado e navega.
+  const handleLoginSucesso = (userMock, rotaSelecionada = '/') => {
+    setUsuarioAtual(userMock);
+    navigate(rotaSelecionada);
+  };
+
   const handleUpdatePerfilComplete = (userAtualizado) => { setUsuarioAtual(null); setTimeout(() => { setUsuarioAtual(userAtualizado); }, 10); };
   const getFotoPerfilUrl = () => { if (!usuarioAtual) return null; const foto = usuarioAtual.get('foto_perfil'); return (foto && typeof foto.url === 'function') ? foto.url() : null; };
   const mudarAba = (id) => {
@@ -732,8 +755,6 @@ export default function App() {
 
   const abrirDetalhes = (tipo, dados) => {
     setItemDetalhado({ tipo, dados });
-
-    // Se tiver protocolo e não for apenas um ID com hash
     if (dados?.protocolo && !dados.protocolo.startsWith('#')) {
       navigate(`/${dados.protocolo}`);
     } else {
@@ -741,10 +762,8 @@ export default function App() {
     }
   };
 
-  const voltarDosDetalhes = () => {
-    navigate(-1);
-  };
-  const handleLogout = async () => { localStorage.removeItem('tilend_user_id'); setUsuarioAtual(null); navigate('/'); setModoPortal(false); };
+  const voltarDosDetalhes = () => { navigate(-1); };
+  const handleLogout = async () => { localStorage.removeItem('tilend_user_id'); setUsuarioAtual(null); navigate('/'); };
 
 
   const handleSearchInput = (texto) => {
@@ -811,40 +830,45 @@ export default function App() {
     }
   };
 
+  // Ainda verificando se há sessão salva — não renderiza nada para evitar piscar
+  if (isLoadingAuth) return null;
+
+  // Nenhum usuário logado — exibe a tela de login + launcher
   if (!usuarioAtual) {
-    return (
-      <div key="view-login">
-        <Login
-          onLoginSucesso={(u) => { setUsuarioAtual(u); setTriggerAtualizacao(t => t + 1); }}
-          onAbrirPortal={() => setModoPortal(true)}
-          onVoltarLogin={() => setModoPortal(false)}
-          isPortal={modoPortal}
-          isDarkMode={isDarkMode}
-          setIsDarkMode={setIsDarkMode}
-        />
-      </div>
-    );
+    return <Login onLoginSucesso={handleLoginSucesso} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />;
   }
 
-  if (usuarioAtual.get('tipoUsuario') === 'solicitante' || modoPortal) {
-    return <PortalSolicitante usuarioAtual={usuarioAtual} onLogout={handleLogout} onVoltar={usuarioAtual.get('tipoUsuario') !== 'solicitante' ? () => setModoPortal(false) : undefined} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />;
+  // Tipo legado 'solicitante' — redireciona direto para o portal sem sidebar
+  if (usuarioAtual.get('tipoUsuario') === 'solicitante') {
+    return <PortalSolicitante usuarioAtual={usuarioAtual} onLogout={handleLogout} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />;
+  }
+
+  const tipoUsuario = usuarioAtual.get('tipoUsuario');
+  const permSet = PERMISSIONS[tipoUsuario] ?? null;
+  const canAccess = (rota) => permSet === null || permSet.has(rota);
+
+  const currentRoute = location.pathname.replace(/^\//, '').split('/')[0] || 'dashboard';
+  if (permSet && !permSet.has(currentRoute) && currentRoute !== 'detalhes') {
+    return <Navigate to={FIRST_ALLOWED_ROUTE[tipoUsuario] || '/agenda'} replace />;
   }
 
   const notificacoesVisiveis = notificacoes.filter(n => !idsExcluidos.includes(n.id));
-  const isGestaoActive = abaAtiva === 'estoque' || abaAtiva === 'saidas' || abaAtiva === 'entradas';
+  const isGestaoActive = abaAtiva === 'emprestimos' || abaAtiva === 'estoque' || abaAtiva === 'saidas' || abaAtiva === 'entradas' || abaAtiva === 'calendario';
 
   const headerInfo = {
     'dashboard': { label: 'Dashboard', icon: Home },
-    'feed': { label: 'Feed de Operações', icon: Inbox },
-    'estoque': { label: 'Inventário Global', icon: Activity },
-    'saidas': { label: 'Registro de Saídas', icon: ArrowUpRight },
-    'entradas': { label: 'Gestão de Devoluções', icon: ArrowDownLeft },
+    'emprestimos': { label: 'Empréstimos', icon: Laptop },
+    'estoque': { label: 'Empréstimos', icon: Laptop },
+    'saidas': { label: 'Empréstimos', icon: Laptop },
+    'entradas': { label: 'Empréstimos', icon: Laptop },
     'localizacoes': { label: 'Localização por Setor', icon: Globe },
-    'calendario': { label: 'Calendários de Agendamento', icon: CalendarDays },
+    'calendario': { label: 'Empréstimos', icon: Laptop },
     'agenda': { label: 'Agenda', icon: CalendarDays },
     'relatorios': { label: 'Inteligência e Relatórios', icon: FileText },
+    'portal': { label: 'Portal do Solicitante', icon: ShoppingBag },
     'chamados_externos': { label: 'Chamados', icon: LayoutGrid },
     'impressoras': { label: 'Gestão de Impressoras', icon: Printer },
+    'sessoes': { label: 'Sessões de Acesso (Beta)', icon: ScreenShare },
     'bot_conhecimento': { label: 'Bot de Conhecimento', icon: MessageSquare },
     'perfil': { label: 'Configurações de Conta', icon: Settings },
     'detalhes': { label: 'Detalhamento Técnico', icon: ArrowLeft }
@@ -880,82 +904,83 @@ export default function App() {
 
         <div className="flex-1 py-2">
           <div className="space-y-2 w-full">
-            <button onClick={() => mudarAba('dashboard')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'dashboard' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+            {canAccess('dashboard') && (
+              <button onClick={() => mudarAba('dashboard')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'dashboard' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
                 <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'dashboard' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
-              <Home size={18} className="shrink-0 transition-transform group-hover:scale-110" />
-              <div className="sidebar-pill">Dashboard</div>
-            </button>
+                <Home size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+                <div className="sidebar-pill">Dashboard</div>
+              </button>
+            )}
 
-            <button onClick={() => mudarAba('agenda')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'agenda' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+            {canAccess('agenda') && (
+              <button onClick={() => mudarAba('agenda')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'agenda' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
                 <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'agenda' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
-              <Calendar size={18} className="shrink-0 transition-transform group-hover:scale-110" />
-              <div className="sidebar-pill">Agenda</div>
-            </button>
+                <Calendar size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+                <div className="sidebar-pill">Agenda</div>
+              </button>
+            )}
 
-            <button onClick={() => mudarAba('feed')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'feed' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
-                <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'feed' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
-              <div className="relative">
-                <Inbox size={18} className="shrink-0 transition-transform group-hover:scale-110" />
-                {hasUnreadFeed && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#8D3046] rounded-full animate-pulse shadow-[0_0_8px_0_#8D3046]"></div>}
-              </div>
-              <div className="sidebar-pill">Feed</div>
-            </button>
-
-            <div className="transition-all relative group">
-              <button onClick={() => setIsGestaoOpen(!isGestaoOpen)} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${isGestaoActive ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
-                  <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${isGestaoActive ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
-                <Activity size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+            {canAccess('estoque') && (
+              <button onClick={() => mudarAba('estoque')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${isGestaoActive ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+                <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${isGestaoActive ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
+                <Laptop size={18} className="shrink-0 transition-transform group-hover:scale-110" />
                 <div className="sidebar-pill">Empréstimos</div>
               </button>
+            )}
 
-              {isGestaoOpen && (
-                <div className="flex flex-col items-center gap-3 mt-2 pb-4 pt-2">
-                  <button onClick={() => mudarAba('estoque')} className={`w-full flex items-center justify-center py-3 transition-all relative group cursor-pointer hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl ${abaAtiva === 'estoque' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`}>
-                    <div className={`rounded-sm bg-[#254E70] shrink-0 w-2 h-2 ${abaAtiva === 'estoque' ? 'shadow-[0_0_8px_0_#254E70]' : ''}`}></div>
-                    <div className="sidebar-pill">Estoque</div>
-                  </button>
-                  <button onClick={() => mudarAba('saidas')} className={`w-full flex items-center justify-center py-3 transition-all relative group cursor-pointer hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl ${abaAtiva === 'saidas' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`}>
-                    <div className={`rounded-sm bg-[#8D3046] shrink-0 w-2 h-2 ${abaAtiva === 'saidas' ? 'shadow-[0_0_8px_0_#8D3046]' : ''}`}></div>
-                    <div className="sidebar-pill">Saídas</div>
-                  </button>
-                  <button onClick={() => mudarAba('entradas')} className={`w-full flex items-center justify-center py-3 transition-all relative group cursor-pointer hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl ${abaAtiva === 'entradas' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`}>
-                    <div className={`rounded-sm bg-[#254E70] shrink-0 w-2 h-2 ${abaAtiva === 'entradas' ? 'shadow-[0_0_8px_0_#254E70]' : ''}`}></div>
-                    <div className="sidebar-pill">Entradas</div>
-                  </button>
-                  <button onClick={() => mudarAba('calendario')} className={`w-full flex items-center justify-center py-3 transition-all relative group cursor-pointer hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-card)]/5 rounded-xl ${abaAtiva === 'calendario' ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white'}`}>
-                    <div className={`rounded-sm bg-[#8D3046] shrink-0 w-2 h-2 ${abaAtiva === 'calendario' ? 'shadow-[0_0_8px_0_#8D3046]' : ''}`}></div>
-                    <div className="sidebar-pill">Reservas</div>
-                  </button>
-                </div>
-              )}
-            </div>
+            {canAccess('portal') && (
+              <button onClick={() => mudarAba('portal')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'portal' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+                <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'portal' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
+                <ShoppingBag size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+                <div className="sidebar-pill">Portal</div>
+              </button>
+            )}
 
-            <button onClick={() => mudarAba('chamados_externos')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'chamados_externos' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+            {canAccess('chamados_externos') && (
+              <button onClick={() => mudarAba('chamados_externos')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'chamados_externos' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
                 <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'chamados_externos' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
-              <LayoutGrid size={18} className="shrink-0 transition-transform group-hover:scale-110" />
-              <div className="sidebar-pill">Chamados</div>
-            </button>
+                <LayoutGrid size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+                <div className="sidebar-pill">Chamados</div>
+              </button>
+            )}
 
-            <button onClick={() => mudarAba('impressoras')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'impressoras' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+            {canAccess('impressoras') && (
+              <button onClick={() => mudarAba('impressoras')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'impressoras' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
                 <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'impressoras' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
-              <Printer size={18} className="shrink-0 transition-transform group-hover:scale-110" />
-              <div className="sidebar-pill">Impressoras</div>
-            </button>
+                <Printer size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+                <div className="sidebar-pill">Impressoras</div>
+              </button>
+            )}
 
-            <button onClick={() => mudarAba('bot_conhecimento')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'bot_conhecimento' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+            {canAccess('sessoes') && (
+              <button onClick={() => mudarAba('sessoes')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'sessoes' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+                <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'sessoes' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
+                <div className="relative">
+                  <ScreenShare size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+                </div>
+                <div className="sidebar-pill">Sessões</div>
+              </button>
+            )}
+
+            {canAccess('bot_conhecimento') && (
+              <button onClick={() => mudarAba('bot_conhecimento')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'bot_conhecimento' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
                 <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'bot_conhecimento' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
-              <div className="relative">
-                <MessageSquare size={18} className="shrink-0 transition-transform group-hover:scale-110" />
-                <Sparkles size={10} className="absolute -top-1.5 -right-1.5 text-[#254E70] animate-pulse" strokeWidth={3} />
-              </div>
-              <div className="sidebar-pill">Conhecimento</div>
-            </button>
+                <div className="relative">
+                  <MessageSquare size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+                  <Sparkles size={10} className="absolute -top-1.5 -right-1.5 text-[#254E70] animate-pulse" strokeWidth={3} />
+                </div>
+                <div className="sidebar-pill">Conhecimento</div>
+              </button>
+            )}
 
-            <button onClick={() => mudarAba('relatorios')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'relatorios' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+            {canAccess('relatorios') && (
+              <button onClick={() => mudarAba('relatorios')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'relatorios' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
                 <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#8D3046] shadow-[0_0_12_rgba(141,48,70,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'relatorios' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
-              <FileText size={18} className="shrink-0 transition-transform group-hover:scale-110" />
-              <div className="sidebar-pill">Relatórios</div>
-            </button>
+                <FileText size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+                <div className="sidebar-pill">Relatórios</div>
+              </button>
+            )}
+
           </div>
         </div>
 
@@ -966,9 +991,6 @@ export default function App() {
               <div className="absolute bottom-[calc(100%+12px)] left-0 w-56 bg-[var(--bg-card)] rounded-2xl z-50 animate-in slide-in-from-bottom-2 flex flex-col border border-slate-200 dark:border-white/10 shadow-2xl">
                 <button onClick={() => { mudarAba('perfil'); setMenuPerfilPopoverAberto(false); }} className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-[var(--bg-hover)] dark:hover:bg-white/5 transition-all duration-300 font-medium border-b border-slate-100 dark:border-white/5 rounded-t-2xl">
                   <Settings size={16} className="shrink-0 text-[#254E70]" /> Editar Perfil
-                </button>
-                <button onClick={() => { setModoPortal(true); setMenuPerfilPopoverAberto(false); }} className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-[var(--bg-hover)] dark:hover:bg-white/5 transition-all duration-300 font-medium border-b border-slate-100 dark:border-white/5">
-                  <Globe size={16} className="shrink-0 text-[#10B981]" /> Ir para Portal Público
                 </button>
                 <button onClick={handleLogout} className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-[#8D3046] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-400/10 transition-all duration-300 font-medium rounded-b-2xl">
                   <LogOut size={16} className="shrink-0" /> Encerrar Sessão
@@ -993,15 +1015,9 @@ export default function App() {
       </aside>
 
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative bg-[var(--bg-page)] md:pt-0 transition-colors duration-300">
-        <header className={`no-print flex items-center p-[0.6vw] justify-between shrink-0 bg-[var(--bg-page)]/70 backdrop-blur-xl transition-all duration-300 ${spotifyAberto || notificacoesAberto ? 'z-[10000]' : 'z-30'}`}>
+        <header className={`no-print flex items-center py-2 px-[0.6vw] justify-between shrink-0 bg-[var(--bg-page)]/70 backdrop-blur-xl transition-all duration-300 ${spotifyAberto || notificacoesAberto ? 'z-[10000]' : 'z-30'}`}>
           <div className={`flex items-center gap-4 ${abaAtiva === 'detalhes' ? 'cursor-pointer hover:opacity-70 transition-all' : ''}`} onClick={abaAtiva === 'detalhes' ? voltarDosDetalhes : undefined}>
-            <div className="p-3 bg-[var(--bg-card)] rounded-2xl flex items-center gap-2 text-slate-900 dark:text-white shadow-sm transition-all duration-500">
-              <HeaderIcon size={18} strokeWidth={2} className={`${abaAtiva === 'saidas' || abaAtiva === 'localizacoes' ? 'text-[#8D3046]' :
-                abaAtiva === 'estoque' || abaAtiva === 'entradas' ? 'text-[#254E70]' :
-                  'text-slate-900 dark:text-white'
-                }`} />
-            </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col ml-2">
               <span className="text-lg font-bold text-slate-900 dark:text-white tracking-tight leading-none">
                 {abaAtiva === 'detalhes' && itemDetalhado?.dados
                   ? (itemDetalhado.dados.protocolo || itemDetalhado.dados.id?.split('-')[0].toUpperCase())
@@ -1013,6 +1029,96 @@ export default function App() {
                 </span>
               )}
             </div>
+
+            {abaAtiva === 'portal' && (
+              <div className="flex items-center gap-2 ml-6 animate-in fade-in slide-in-from-left-2 duration-500">
+                <button
+                  onClick={() => setAbaPortal('dashboard')}
+                  className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                  style={{
+                    backgroundColor: abaPortal === 'dashboard' ? 'var(--bg-selected)' : 'var(--bg-soft)',
+                    color: abaPortal === 'dashboard' ? 'var(--text-selected)' : 'var(--text-muted)'
+                  }}
+                >
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => setAbaPortal('catalogo')}
+                  className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                  style={{
+                    backgroundColor: abaPortal === 'catalogo' ? 'var(--bg-selected)' : 'var(--bg-soft)',
+                    color: abaPortal === 'catalogo' ? 'var(--text-selected)' : 'var(--text-muted)'
+                  }}
+                >
+                  Catálogo
+                </button>
+                <button 
+                  onClick={() => setAbaPortal('historico')} 
+                  className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                  style={{
+                    backgroundColor: abaPortal === 'historico' ? 'var(--bg-selected)' : 'var(--bg-soft)',
+                    color: abaPortal === 'historico' ? 'var(--text-selected)' : 'var(--text-muted)'
+                  }}
+                >
+                  Meus Pedidos
+                </button>
+              </div>
+            )}
+
+            {isGestaoActive && (
+              <div className="flex items-center gap-2 ml-6 animate-in fade-in slide-in-from-left-2 duration-500">
+                <button
+                  onClick={() => mudarAba('emprestimos')}
+                  className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                  style={{
+                    backgroundColor: abaAtiva === 'emprestimos' ? 'var(--bg-selected)' : 'var(--bg-soft)',
+                    color: abaAtiva === 'emprestimos' ? 'var(--text-selected)' : 'var(--text-muted)'
+                  }}
+                >
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => mudarAba('estoque')}
+                  className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                  style={{
+                    backgroundColor: abaAtiva === 'estoque' ? 'var(--bg-selected)' : 'var(--bg-soft)',
+                    color: abaAtiva === 'estoque' ? 'var(--text-selected)' : 'var(--text-muted)'
+                  }}
+                >
+                  Estoque
+                </button>
+                <button 
+                  onClick={() => mudarAba('saidas')} 
+                  className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                  style={{
+                    backgroundColor: abaAtiva === 'saidas' ? 'var(--bg-selected)' : 'var(--bg-soft)',
+                    color: abaAtiva === 'saidas' ? 'var(--text-selected)' : 'var(--text-muted)'
+                  }}
+                >
+                  Saídas
+                </button>
+                <button 
+                  onClick={() => mudarAba('entradas')} 
+                  className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                  style={{
+                    backgroundColor: abaAtiva === 'entradas' ? 'var(--bg-selected)' : 'var(--bg-soft)',
+                    color: abaAtiva === 'entradas' ? 'var(--text-selected)' : 'var(--text-muted)'
+                  }}
+                >
+                  Entradas
+                </button>
+                <button 
+                  onClick={() => mudarAba('calendario')} 
+                  className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                  style={{
+                    backgroundColor: abaAtiva === 'calendario' ? 'var(--bg-selected)' : 'var(--bg-soft)',
+                    color: abaAtiva === 'calendario' ? 'var(--text-selected)' : 'var(--text-muted)'
+                  }}
+                >
+                  Reservas
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="relative w-48 md:w-80 hidden sm:block z-50 ml-auto">
@@ -1124,7 +1230,7 @@ export default function App() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsDarkMode(!isDarkMode)}
-                className="p-2.5 rounded-full text-slate-500 dark:text-[#A0A0A0] hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer shrink-0"
+                className="p-2.5 rounded-2xl text-slate-500 dark:text-[#606060] hover:bg-[var(--bg-soft)] hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer shrink-0"
                 title={isDarkMode ? 'Modo Claro' : 'Modo Escuro'}
               >
                 {isDarkMode ? <Moon size={18} /> : <Sun size={18} />}
@@ -1247,27 +1353,34 @@ export default function App() {
           <div className={`border-r border-transparent border-b border-transparent flex flex-col ${abaAtiva === 'agenda' ? 'h-[calc(100vh-82px)] pb-0' : ['detalhes', 'chamados_externos', 'saidas', 'estoque'].includes(abaAtiva) ? 'h-[calc(100vh-100px)] pb-[1%]' : 'min-h-full pb-[1%]'} m-[1%]`}>
             <Routes>
               <Route path="/" element={<DashboardMetricas triggerAtualizacao={triggerAtualizacao} usuarioAtual={usuarioAtual} onOpenDetails={abrirDetalhes} />} />
-              <Route path="/feed" element={<div className="animate-in fade-in duration-500"><FeedResumo onNavigate={mudarAba} triggerUpdate={triggerAtualizacao} onOperacaoFeed={() => setTriggerAtualizacao(t => t + 1)} onOpenDetails={abrirDetalhes} /></div>} />
+              <Route path="/emprestimos" element={<div className="animate-in fade-in duration-500"><DashboardEmprestimos itens={itens} /></div>} />
               <Route path="/estoque" element={<div className="h-full grid grid-cols-1 xl:grid-cols-3 gap-8 lg:gap-10 animate-in fade-in duration-500 items-stretch"><div className="xl:col-span-1 h-full"><CadastroItem onItemCadastrado={() => setTriggerAtualizacao(t => t + 1)} /></div><div className="xl:col-span-2 h-full"><GestaoEstoqueList itens={itens} onItemEditadoOrExcluido={() => setTriggerAtualizacao(t => t + 1)} onRefresh={() => setTriggerAtualizacao(t => t + 1)} /></div></div>} />
               <Route path="/saidas" element={<div className="h-full animate-in fade-in duration-500 flex flex-col"><NovoEmprestimo itensDisponiveis={itens} usuarioAtual={usuarioAtual} onEmprestimoRealizado={() => { setTriggerAtualizacao(t => t + 1); mudarAba('entradas'); }} onOpenDetails={(tipo, dados) => abrirDetalhes(tipo, dados)} /></div>} />
               <Route path="/entradas" element={<div className="h-full animate-in fade-in duration-500"><ListaEmprestimosAtivos triggerAtualizacao={triggerAtualizacao} onDevolucao={() => setTriggerAtualizacao(t => t + 1)} onOpenDetails={(dados) => abrirDetalhes('emprestimo', dados)} /></div>} />
-
               <Route path="/agenda" element={<div className="animate-in fade-in duration-500 h-full w-full pb-0"><AgendaEstiloGoogle usuarioAtual={usuarioAtual} /></div>} />
               <Route path="/calendario" element={<div className="animate-in fade-in duration-500"><CalendarioAgendamentos itensDisponiveis={itens} onOpenDetails={(tipo, dados) => abrirDetalhes(tipo, dados)} /></div>} />
               <Route path="/relatorios" element={<div className="animate-in fade-in duration-500"><RelatoriosExportacao /></div>} />
+              <Route path="/portal" element={<div className="animate-in fade-in duration-500 h-full"><PortalSolicitante usuarioAtual={usuarioAtual} isEmbedded={true} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} externalAba={abaPortal} setExternalAba={setAbaPortal} /></div>} />
               <Route path="/documentos" element={<div className="animate-in fade-in duration-500"><DocumentosAssinados /></div>} />
               <Route path="/bot_conhecimento" element={<div className="animate-in fade-in duration-500"><KnowledgeBot /></div>} />
               <Route path="/chamados_externos" element={<div className="animate-in fade-in duration-700"><ChamadosAdmin onOpenDetails={(dados) => abrirDetalhes('chamado', dados)} /></div>} />
               <Route path="/impressoras" element={<div className="animate-in fade-in duration-700"><PrintersAdmin /></div>} />
+              <Route path="/sessoes" element={
+                <div className="h-full flex flex-col items-center justify-center animate-in fade-in duration-500 text-center px-4">
+                  <ScreenShare size={48} className="text-slate-300 dark:text-[#303030] mb-4" strokeWidth={1.5} />
+                  <h2 className="text-xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">Gestão de Sessões</h2>
+                  <div className="flex items-center gap-2 bg-[#254E70]/10 text-[#254E70] dark:bg-[#254E70]/30 dark:text-blue-300 px-4 py-2.5 rounded-xl mb-4 border border-[#254E70]/20">
+                    <Sparkles size={16} className="animate-pulse" />
+                    <span className="text-xs font-bold uppercase tracking-widest">Funcionalidade em Fase de Testes</span>
+                  </div>
+                  <p className="text-sm text-slate-500 dark:text-[#808080] max-w-md font-medium leading-relaxed">
+                    Esta área está em desenvolvimento. Em breve você poderá monitorar e gerenciar sessões ativas e acesso remoto diretamente por aqui.
+                  </p>
+                </div>
+              } />
               <Route path="/perfil" element={<div className="animate-in fade-in duration-500 pt-4"><EditarPerfil usuarioAtual={usuarioAtual} onPerfilAtualizado={handleUpdatePerfilComplete} /></div>} />
-
-              {/* Rota de Protocolo (Novo Padrão) */}
               <Route path="/:ano/:serial" element={<div className="h-full animate-in fade-in duration-500 px-4 md:px-6 pt-0 pb-10"><DetalhesGerencial itemDetalhado={itemDetalhado} setItemDetalhado={setItemDetalhado} onVoltar={voltarDosDetalhes} onUpdateItem={() => setTriggerAtualizacao(t => t + 1)} /></div>} />
-
-              {/* Rota de Protocolo Único (Chamados) */}
               <Route path="/:protocoloUnico" element={<div className="h-full animate-in fade-in duration-500 px-4 md:px-6 pt-0 pb-10"><DetalhesGerencial itemDetalhado={itemDetalhado} setItemDetalhado={setItemDetalhado} onVoltar={voltarDosDetalhes} onUpdateItem={() => setTriggerAtualizacao(t => t + 1)} /></div>} />
-
-              {/* Fallback para Detalhes Legado ou URL Direta */}
               <Route path="/detalhes" element={<div className="h-full animate-in fade-in duration-500 px-4 md:px-6 pt-0 pb-10"><DetalhesGerencial itemDetalhado={itemDetalhado} setItemDetalhado={setItemDetalhado} onVoltar={voltarDosDetalhes} onUpdateItem={() => setTriggerAtualizacao(t => t + 1)} /></div>} />
             </Routes>
           </div>
