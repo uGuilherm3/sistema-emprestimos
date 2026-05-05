@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { supabase } from './utils/supabaseClient';
+import { api } from './utils/apiClient';
 import {
   ChevronLeft,
   ChevronRight,
@@ -199,30 +199,12 @@ const AgendaEstiloGoogle = ({ usuarioAtual }) => {
   const fetchEventos = async () => {
     setLoading(true);
     try {
-      // Tenta a query robusta (Dono ou Participante)
-      let query = supabase.from('agenda_eventos').select('*');
-
-      // Tenta aplicar o filtro de participantes se possível
-      const { data, error } = await query.or(`tecnico.eq.${currentUser},participantes.cs.["${currentUser}"]`);
-
-      if (error) {
-        console.warn("Erro na query robusta, tentando fallback simples:", error);
-        // Fallback: se a coluna 'participantes' não existir, busca apenas por técnico para não sumir nada
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('agenda_eventos')
-          .select('*')
-          .eq('tecnico', currentUser);
-
-        if (fallbackError) throw fallbackError;
-        processarEventos(fallbackData);
-      } else {
-        processarEventos(data);
-      }
+      const { data, error } = await api.agenda.list({ tecnico: currentUser });
+      if (error) throw new Error(error);
+      processarEventos(data);
     } catch (err) {
       console.error("Erro inesperado ao buscar eventos:", err);
-      if (err.message?.includes('not find the table')) {
-        setErrorMessage("Tabela 'agenda_eventos' não encontrada.");
-      }
+      setErrorMessage("Erro ao buscar eventos da agenda.");
     } finally {
       setLoading(false);
     }
@@ -241,36 +223,24 @@ const AgendaEstiloGoogle = ({ usuarioAtual }) => {
 
   const handleLike = async (evento) => {
     try {
-      // Otimismo: atualiza localmente primeiro para UX instantânea
       const novosEventos = eventos.map(e =>
         e.id === evento.id ? { ...e, likes: (e.likes || 0) + 1 } : e
       );
       setEventos(novosEventos);
-
-      const { error } = await supabase
-        .from('agenda_eventos')
-        .update({ likes: (evento.likes || 0) + 1 })
-        .eq('id', evento.id);
-
-      if (error) {
-        // Rollback em caso de erro
-        setEventos(eventos);
-        console.error("Erro ao salvar curtida:", error);
-      }
+      const { error } = await api.agenda.update(evento.id, { likes: (evento.likes || 0) + 1 });
+      if (error) { setEventos(eventos); console.error("Erro ao salvar curtida:", error); }
     } catch (err) {
       console.error("Erro inesperado ao curtir:", err);
     }
   };
 
-  // BUSCAR PERFIS DOS TÉCNICOS (Para fotos de responsáveis)
+  // BUSCAR PERFIS DOS TÉCNICOS
   const fetchPerfis = async () => {
     try {
-      const { data } = await supabase.from('users').select('username, foto_perfil');
+      const { data } = await api.agenda.perfis();
       if (data) {
         const map = {};
-        data.forEach(p => {
-          map[p.username] = p.foto_perfil;
-        });
+        data.forEach(p => { map[p.username] = p.foto_perfil; });
         setPerfis(map);
       }
     } catch (e) { console.error("Erro ao buscar perfis:", e); }
@@ -324,73 +294,13 @@ const AgendaEstiloGoogle = ({ usuarioAtual }) => {
   }, [eventosNoDiaSelecionado, dataSelecionada]);
 
   const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (file.size > 3 * 1024 * 1024) {
-      setErrorMessage("O arquivo deve ter no máximo 3MB.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { data, error } = await supabase.storage
-        .from('banners')
-        .upload(filePath, file);
-
-      if (error) {
-        throw error;
-      }
-
-      const { data: publicUrlData } = supabase.storage
-        .from('banners')
-        .getPublicUrl(filePath);
-
-      setFormData({ ...formData, banner: publicUrlData.publicUrl });
-    } catch (error) {
-      console.error("Erro no upload:", error);
-      setErrorMessage("Crie um bucket público chamado 'banners' no Storage do Supabase.");
-    } finally {
-      setLoading(false);
-    }
+    setErrorMessage("Upload de banners requer MinIO/armazenamento local no servidor.");
+    setTimeout(() => setErrorMessage(null), 4000);
   };
 
   const handleApresentacaoUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (file.size > 3 * 1024 * 1024) {
-      setErrorMessage("O arquivo deve ter no máximo 3MB.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `apresentacao_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { data, error } = await supabase.storage
-        .from('banners')
-        .upload(filePath, file);
-
-      if (error) throw error;
-
-      const { data: publicUrlData } = supabase.storage
-        .from('banners')
-        .getPublicUrl(filePath);
-
-      setFormData({ ...formData, apresentacao: publicUrlData.publicUrl });
-    } catch (error) {
-      console.error("Erro no upload da apresentação:", error);
-      setErrorMessage("Erro ao fazer upload da apresentação.");
-    } finally {
-      setLoading(false);
-    }
+    setErrorMessage("Upload de apresentações requer MinIO/armazenamento local no servidor.");
+    setTimeout(() => setErrorMessage(null), 4000);
   };
 
   // Função para lidar com a edição
@@ -454,16 +364,11 @@ const AgendaEstiloGoogle = ({ usuarioAtual }) => {
     setLoading(true);
     try {
       if (formData.id) {
-        const { error } = await supabase
-          .from('agenda_eventos')
-          .update(payload)
-          .eq('id', formData.id);
-        if (error) throw error;
+        const { error } = await api.agenda.update(formData.id, payload);
+        if (error) throw new Error(error);
       } else {
-        const { error } = await supabase
-          .from('agenda_eventos')
-          .insert([{ ...payload, id: crypto.randomUUID() }]);
-        if (error) throw error;
+        const { error } = await api.agenda.insert({ ...payload, id: crypto.randomUUID() });
+        if (error) throw new Error(error);
       }
 
       await fetchEventos();
@@ -506,12 +411,8 @@ const AgendaEstiloGoogle = ({ usuarioAtual }) => {
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('agenda_eventos')
-        .delete()
-        .eq('id', evento.id);
-
-      if (error) throw error;
+      const { error } = await api.agenda.delete(evento.id);
+      if (error) throw new Error(error);
 
       await fetchEventos();
       setEventoSelecionado(null);

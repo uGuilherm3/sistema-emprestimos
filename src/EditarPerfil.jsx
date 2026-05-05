@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from './utils/supabaseClient';
+import { api } from './utils/apiClient';
 import { UserCog, Mail, Lock, ShieldCheck, ShieldAlert, Camera, User, Briefcase, ArrowRight, Users, Edit3, CheckCircle2 } from 'lucide-react';
 
 export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
@@ -39,10 +39,7 @@ export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
   useEffect(() => {
     const fetchUsuarios = async () => {
       if (isAdmin) {
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .order('username', { ascending: true });
+        const { data, error } = await api.users.list({ order: 'username', limit: 200 });
         if (!error && data) setListaUsuarios(data);
       }
     };
@@ -89,16 +86,11 @@ export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
     }
 
     try {
-      let publicUrl = null;
+      // Upload de foto de perfil
       if (fotoInputRef.current?.files[0]) {
-        const file = fotoInputRef.current.files[0];
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${targetUserId}-${Date.now()}.${fileExt}`;
-        const filePath = `${fileName}`;
-        const { error: uploadError } = await supabase.storage.from('fotos_perfil').upload(filePath, file);
-        if (uploadError) throw uploadError;
-        const { data: urlData } = supabase.storage.from('fotos_perfil').getPublicUrl(filePath);
-        publicUrl = urlData.publicUrl;
+        const { data: uploadData, error: uploadError } = await api.uploads.foto(targetUserId, fotoInputRef.current.files[0]);
+        if (uploadError) throw new Error('Erro no upload da foto: ' + uploadError);
+        // A URL já foi salva no banco pelo backend; o campo foto_perfil virá no perfilData abaixo
       }
 
       const updates = {
@@ -108,12 +100,10 @@ export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
         setor: perfilForm.setor.trim().toUpperCase(),
         email: perfilForm.email.trim()
       };
-      if (publicUrl) updates.foto_perfil = publicUrl;
       if (perfilForm.newPassword) updates.pin = perfilForm.newPassword;
 
-      // Atualiza os dados do usuário na tabela unificada 'users'
-      const { data: perfilData, error } = await supabase.from('users').update(updates).eq('id', targetUserId).select().single();
-      if (error) throw error;
+      const { data: perfilData, error } = await api.users.update(targetUserId, updates);
+      if (error) throw new Error(error);
 
       setSucessoUpdate(true);
       setPerfilForm(prev => ({ ...prev, newPassword: '', confirmPassword: '' }));

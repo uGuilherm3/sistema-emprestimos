@@ -1,6 +1,6 @@
 // src/CalendarioAgendamentos.jsx
 import React, { useState, useEffect } from 'react';
-import { supabase } from './utils/supabaseClient';
+import { api } from './utils/apiClient';
 import { CalendarDays, ChevronLeft, ChevronRight, Plus, Minus, Package, User, Clock, Trash2, ShieldAlert, CheckCircle2, ChevronDown, Briefcase, Hash, Printer, Edit2, ArrowUpRight, UploadCloud, X, ShieldCheck, AlertTriangle, ArrowRight, PenLine } from 'lucide-react';
 import { logAction } from './utils/log';
 import { createGLPITicket } from './utils/glpiClient';
@@ -78,20 +78,15 @@ export default function CalendarioAgendamentos({ itensDisponiveis, onOpenDetails
   const fetchAgendamentos = async () => {
     setLoading(true);
     try {
-      // Busca Unificada na tabela emprestimo (Pendente, Aprovado e Aberto)
-      const { data: todos, error } = await supabase.from('emprestimo')
-        .select('*, item(*)')
-        .in('status_emprestimo', ['Aprovado', 'Pendente', 'Aberto']);
-
-      if (error) throw error;
-
+      const { data: todos, error } = await api.emprestimos.list({ in_status: 'Aprovado,Pendente,Aberto', limit: 500 });
+      if (error) throw new Error(error);
       setAgendamentos((todos || []).map(o => wrap(o)));
     } catch (error) { console.error(error); } finally { setLoading(false); }
   };
 
   const fetchColaboradores = async () => {
     try {
-      const { data } = await supabase.from('users').select('*').order('nome', { ascending: true });
+      const { data } = await api.users.list({ order: 'nome', limit: 500 });
       setColaboradores((data || []).map(o => wrap(o)));
     } catch (e) { console.error(e); }
   };
@@ -101,12 +96,12 @@ export default function CalendarioAgendamentos({ itensDisponiveis, onOpenDetails
 
   const handleAddColaborador = async () => {
     try {
-      const { error } = await supabase.from('users').insert({
+      const { error } = await api.users.insert({
         id: crypto.randomUUID(),
         nome: buscaColab.trim(),
         setor: setorNovo.trim().toUpperCase()
       });
-      if (error) throw error;
+      if (error) throw new Error(error);
 
       fetchColaboradores();
       setNomeSolicitante(buscaColab.trim());
@@ -126,11 +121,11 @@ export default function CalendarioAgendamentos({ itensDisponiveis, onOpenDetails
   const salvarEdicaoColab = async (e, id) => {
     e.stopPropagation();
     try {
-      const { error } = await supabase.from('users').update({
+      const { error } = await api.users.update(id, {
         nome: editNomeColab.trim(),
         setor: editSetorColab.trim().toUpperCase()
-      }).eq('id', id);
-      if (error) throw error;
+      });
+      if (error) throw new Error(error);
       setEditandoColab(null);
       fetchColaboradores();
       if (nomeSolicitante === editNomeColab.trim() || nomeSolicitante === '') {
@@ -144,8 +139,8 @@ export default function CalendarioAgendamentos({ itensDisponiveis, onOpenDetails
     e.stopPropagation();
     if (!window.confirm('Excluir este colaborador salvo?')) return;
     try {
-      const { error } = await supabase.from('users').delete().eq('id', id);
-      if (error) throw error;
+      const { error } = await api.users.delete(id);
+      if (error) throw new Error(error);
       fetchColaboradores();
     } catch (err) { alert(err.message); }
   };
@@ -270,7 +265,7 @@ export default function CalendarioAgendamentos({ itensDisponiveis, onOpenDetails
 
     try {
       const userId = localStorage.getItem('tilend_user_id');
-      const { data: userProfile } = await supabase.from('users').select('*').eq('id', userId).single();
+      const { data: userProfile } = await api.users.get(localStorage.getItem('tilend_user_id'));
       if (!userProfile) throw new Error('Sessão expirada. Faça login novamente.');
 
       const [hora, minuto] = horaReserva.split(':');
@@ -291,10 +286,9 @@ export default function CalendarioAgendamentos({ itensDisponiveis, onOpenDetails
 
       if (isEdicao) {
         // Modo edição (único item)
-        const { data: itemBanco } = await supabase.from('item').select('*').eq('id', itemId).single();
-        const { data: ocupacao } = await supabase.from('emprestimo')
-          .select('*').eq('item_id', itemId).in('status_emprestimo', ['Aberto', 'Aprovado']);
-        const filteredOcupacao = (ocupacao || []).filter(r => r.id !== editandoId);
+        const { data: itemBanco } = await api.items.get(itemId);
+        const { data: ocupacaoAll } = await api.emprestimos.list({ item_id: itemId, in_status: 'Aberto,Aprovado', limit: 500 });
+        const filteredOcupacao = (ocupacaoAll || []).filter(r => r.id !== editandoId);
         let qtdSobreposta = 0;
         for (const r of filteredOcupacao) {
           const exInicio = new Date(r.data_inicio_prevista || r.created_at);
@@ -310,16 +304,12 @@ export default function CalendarioAgendamentos({ itensDisponiveis, onOpenDetails
           data_devolucao_prevista: dataDevolucaoNova?.toISOString() || null,
           nome_pessoa: nomeSolicitante.trim()
         };
-        const { error } = await supabase.from('emprestimo').update(payload).eq('id', editandoId);
-        if (error) throw error;
+        const { error } = await api.emprestimos.update(editandoId, payload);
+        if (error) throw new Error(error);
       } else {
         // Modo criação: múltiplos itens com mesmo protocolo
-        const agoraProtocolo = new Date();
-        const anoAtual = agoraProtocolo.getFullYear();
-        const inicioAno = new Date(anoAtual, 0, 1).toISOString();
-        const [{ data: ultimosEmps }, { data: ultimosAgends }] = await Promise.all([
-          supabase.from('emprestimo').select('protocolo').gte('created_at', inicioAno).order('protocolo', { ascending: false }).limit(50),
-          supabase.from('agendamento').select('protocolo').gte('created_at', inicioAno).order('protocolo', { ascending: false }).limit(50)
+        const [{ data: ultimosEmps }] = await Promise.all([
+          api.emprestimos.protocolCount()
         ]);
         let maiorSerial = 0;
         const processarSeriais = (list) => {
@@ -331,8 +321,7 @@ export default function CalendarioAgendamentos({ itensDisponiveis, onOpenDetails
           });
         };
         processarSeriais(ultimosEmps);
-        processarSeriais(ultimosAgends);
-        const protocoloGerado = `${anoAtual}/${String(maiorSerial + 1).padStart(4, '0')}`;
+        const protocoloGerado = `${new Date().getFullYear()}/${String(maiorSerial + 1).padStart(4, '0')}`;
 
         // ABERTURA DE CHAMADO NO GLPI (Regra de Negócio: Reserva Direta via Agenda)
         let ticketId = null;
@@ -365,16 +354,15 @@ Chamado gerado automaticamente pela Agenda do Sistema.
 
         // Validar e inserir cada item do carrinho
         for (const cartItem of carrinhoReserva) {
-          const { data: ocupacao } = await supabase.from('emprestimo')
-            .select('*').eq('item_id', cartItem.itemId).in('status_emprestimo', ['Aberto', 'Aprovado']);
+          const { data: ocupacaoAll } = await api.emprestimos.list({ item_id: cartItem.itemId, in_status: 'Aberto,Aprovado', limit: 500 });
           let qtdSobreposta = 0;
-          for (const r of (ocupacao || [])) {
+          for (const r of (ocupacaoAll || [])) {
             const exInicio = new Date(r.data_inicio_prevista || r.created_at);
             const exFim = r.data_devolucao_prevista ? new Date(r.data_devolucao_prevista) : new Date('2100-01-01');
             const novoFim = dataDevolucaoNova || new Date('2100-01-01');
             if (exInicio < novoFim && exFim > dataComHora) qtdSobreposta += (r.quantidade_emprestada || 1);
           }
-          const { data: itemBanco } = await supabase.from('item').select('quantidade').eq('id', cartItem.itemId).single();
+          const { data: itemBanco } = await api.items.get(cartItem.itemId);
           if (cartItem.quantidade > (itemBanco?.quantidade || 0) - qtdSobreposta) {
             throw new Error(`Estoque indisponível para "${cartItem.nomeEquipamento}" neste horário.`);
           }
@@ -391,8 +379,8 @@ Chamado gerado automaticamente pela Agenda do Sistema.
             nome_pessoa: nomeSolicitante.trim(),
             observacoes: ticketId ? `[AGENDA] [GLPI_TICKET: ${ticketId}]` : '[AGENDA]'
           };
-          const { error } = await supabase.from('emprestimo').insert(payload);
-          if (error) throw error;
+          const { error } = await api.emprestimos.insert(payload);
+          if (error) throw new Error(error);
         }
       }
 
@@ -406,12 +394,9 @@ Chamado gerado automaticamente pela Agenda do Sistema.
     const multi = Array.isArray(ids);
     if (!window.confirm(multi ? `Cancelar estas ${ids.length} solicitações?` : 'Cancelar este agendamento?')) return;
     try {
-      const query = supabase.from('agendamento').delete();
-      if (multi) query.in('id', ids);
-      else query.eq('id', ids);
-
-      const { error } = await query;
-      if (error) throw error;
+      // Cancela do banco de empréstimos (agenda unificada)
+      const idsArr = Array.isArray(ids) ? ids : [ids];
+      await api.emprestimos.deleteMany(idsArr);
       fetchAgendamentos();
     }
     catch (e) { alert('Erro ao excluir: ' + e.message); }
@@ -450,19 +435,19 @@ Chamado gerado automaticamente pela Agenda do Sistema.
   const executarSaidaComAssinatura = async (agGroup, nomeResponsavel, textoAssinatura) => {
     try {
       const userId = localStorage.getItem('tilend_user_id');
-      const { data: userProfile } = await supabase.from('users').select('username').eq('id', userId).single();
+      const { data: userProfile } = await api.users.get(userId);
 
       const idsEfetuados = [];
       const idsAgendas = [];
 
       for (const ag of agGroup.itens) {
-        const { data: itemBanco } = await supabase.from('item').select('id, nome_equipamento, quantidade').eq('id', ag.get('item_id')).single();
-        const qtdAtual = itemBanco.quantidade || 0;
+        const { data: itemBanco } = await api.items.get(ag.get('item_id'));
+        const qtdAtual = itemBanco?.quantidade || 0;
         const qtdReservada = ag.get('quantidade');
 
-        if (qtdAtual < qtdReservada) throw new Error(`Estoque insuficiente para ${itemBanco.nome_equipamento}.`);
+        if (qtdAtual < qtdReservada) throw new Error(`Estoque insuficiente para ${itemBanco?.nome_equipamento}.`);
 
-        await supabase.from('item').update({ quantidade: qtdAtual - qtdReservada }).eq('id', itemBanco.id);
+        await api.items.update(itemBanco.id, { quantidade: qtdAtual - qtdReservada });
 
         const payload = {
           id: crypto.randomUUID(),
@@ -478,15 +463,16 @@ Chamado gerado automaticamente pela Agenda do Sistema.
           quem_vai_buscar: nomeResponsavel
         };
 
-        const { data: novoEmp, error: errEmp } = await supabase.from('emprestimo').insert(payload).select('*, item(*)').single();
-        if (errEmp) throw errEmp;
+        const { data: novoEmp, error: errEmp } = await api.emprestimos.insert(payload);
+        if (errEmp) throw new Error(errEmp);
 
         idsEfetuados.push(novoEmp);
         idsAgendas.push(ag.id);
       }
 
-      await supabase.from('agendamento').delete().in('id', idsAgendas);
-      setRecibo({ tipo: 'retirada', obj: wrap(idsEfetuados[0]) });
+      // Agenda unificada: não há mais tabela separada
+      // Os itens aprovados já foram migrados para emprestimo com status 'Aberto'
+      setRecibo({ tipo: 'retirada', obj: wrap(novoEmp || idsEfetuados[0]) });
       setMensagem({ texto: `${idsEfetuados.length} Ativo(s) entregues com sucesso!`, tipo: 'sucesso' });
       fetchAgendamentos();
       setTimeout(() => setMensagem({ texto: '', tipo: '' }), 4000);
@@ -497,24 +483,22 @@ Chamado gerado automaticamente pela Agenda do Sistema.
 
   const executarDevolucaoComAssinatura = async (empGroup, nomeResponsavel, textoAssinatura) => {
     try {
-      const { data: userProfile } = await supabase.from('users').select('username').eq('id', localStorage.getItem('tilend_user_id')).single();
+      const { data: userProfile } = await api.users.get(localStorage.getItem('tilend_user_id'));
 
       for (const emp of empGroup.itens) {
-        const { data: itemBanco } = await supabase.from('item').select('id, quantidade').eq('id', emp.item_id).single();
-        await supabase.from('item').update({ quantidade: (itemBanco.quantidade || 0) + (emp.get('quantidade_emprestada') || 1) }).eq('id', itemBanco.id);
+        const { data: itemBanco } = await api.items.get(emp.item_id);
+        if (itemBanco) await api.items.update(itemBanco.id, { quantidade: (itemBanco.quantidade || 0) + (emp.get('quantidade_emprestada') || 1) });
       }
 
       const ids = empGroup.itens.map(i => i.id);
-      const { error } = await supabase.from('emprestimo').update({
+      await api.emprestimos.updateMany(ids, {
         status_emprestimo: 'Devolvido',
         data_hora_retorno: new Date().toISOString(),
         nome_tecnico_retorno: userProfile?.username || '',
         assinatura_dev_eletronica: true,
         detalhes_assinatura_dev: textoAssinatura,
         quem_vai_entregar: nomeResponsavel
-      }).in('id', ids);
-
-      if (error) throw error;
+      });
       setMensagem({ texto: 'Devolução registrada com sucesso!', tipo: 'sucesso' });
       fetchAgendamentos();
       setTimeout(() => setMensagem({ texto: '', tipo: '' }), 3000);

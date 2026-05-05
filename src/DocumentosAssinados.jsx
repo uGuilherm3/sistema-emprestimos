@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from './utils/supabaseClient';
+import { api } from './utils/apiClient';
 import { FileText, Search, Printer, User, CalendarDays, ShieldCheck, Download, Trash2, CheckCircle2, Package, Filter, ChevronRight } from 'lucide-react';
 import VoucherPreview from './VoucherPreview';
 
@@ -13,15 +13,12 @@ export default function DocumentosAssinados() {
   const fetchDocumentos = async () => {
     setLoading(true);
     try {
-      // Buscamos empréstimos que tenham alguma assinatura eletrônica ou anexo
-      const { data, error } = await supabase
-        .from('emprestimo')
-        .select('*, item(*)')
-        .or('assinatura_eletronica.eq.true,assinatura_dev_eletronica.eq.true,comprovante_saida.neq.null')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setDocumentos(data || []);
+      // Busca todos os empréstimos para filtrar por assinatura no cliente
+      const { data, error } = await api.emprestimos.list({ limit: 500 });
+      if (error) throw new Error(error);
+      // Filtra os que têm assinatura eletrônica
+      const comAssinatura = (data || []).filter(e => e.assinatura_eletronica || e.assinatura_dev_eletronica || e.comprovante_saida);
+      setDocumentos(comAssinatura);
     } catch (err) {
       console.error('Erro ao buscar documentos:', err);
     } finally {

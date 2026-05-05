@@ -3,7 +3,7 @@
 // Busca todos os ativos do GLPI e insere/atualiza na tabela `inventario`.
 // Campos locais (status_local, notas_locais, bloqueado_insumo) são PRESERVADOS.
 
-import { supabase } from './supabaseClient';
+import { api } from './apiClient';
 
 const GLPI_URL = import.meta.env.VITE_GLPI_URL || 'https://chamados.oabce.org.br/apirest.php';
 const APP_TOKEN = import.meta.env.VITE_GLPI_APP_TOKEN || '7uq6DCSHn6hAPfGrquvoHcuMgCjX5Pff5zLeS1ON';
@@ -182,9 +182,7 @@ export async function sincronizarInventario(onProgress = null) {
         ultima_sync: item.ultima_sync
       }));
 
-      const { error } = await supabase
-        .from('item')
-        .upsert(lote, { onConflict: 'glpi_id' });
+      const { error } = await api.items.upsert(lote);
 
       if (error) {
         console.error(`[SYNC] Erro no lote ${loteNum}:`, error);

@@ -3,7 +3,7 @@
 // Layout de 2 colunas: Calendário (8/12) e Sidebar de Horário (4/12)
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from './utils/supabaseClient';
+import { api } from './utils/apiClient';
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, ArrowLeft, Plus, User, AlertTriangle, ArrowRight } from 'lucide-react';
 
 const mesNomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -112,11 +112,11 @@ export default function CalendarioDisponibilidade({ item, onVoltar, onReservar }
     try {
       const itemId = item.id;
       // Unified query just from emprestimo
-      const { data, error } = await supabase.from('emprestimo')
-        .select('*')
-        .eq('item_id', itemId)
-        .in('status_emprestimo', ['Aprovado', 'Pendente', 'Aberto']);
-      if (error) throw error;
+      const { data, error } = await api.emprestimos.list({
+        item_id: itemId,
+        in_status: 'Aprovado,Pendente,Aberto'
+      });
+      if (error) throw new Error(error);
       
       setEmps((data || []).map(e => wrap(e)));
       setAgs([]); // we leave ags empty since we unified

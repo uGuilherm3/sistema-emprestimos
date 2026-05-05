@@ -1,6 +1,5 @@
-// src/PortalSolicitante.jsx
 import React, { useState, useEffect } from 'react';
-import { supabase } from './utils/supabaseClient';
+import { api } from './utils/apiClient';
 import { Search, ShoppingBag, Plus, Minus, Trash2, CalendarDays, Clock, FileText, Send, CheckCircle2, ArrowLeft, ShieldAlert, LogOut, Sun, Moon, Info, LayoutGrid, List, AlertTriangle, X, Download, UploadCloud, PenLine, ShieldCheck, Printer } from 'lucide-react';
 import CalendarioDisponibilidade from './CalendarioDisponibilidade';
 import { logAction } from './utils/log';
@@ -111,15 +110,8 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
     let userToLogin = username.trim().toLowerCase();
 
     try {
-      // Login Simplificado: Busca na tabela PERFIL por username ou email + pin
-      const { data: profile, error } = await supabase
-        .from('users')
-        .select('*')
-        .or(`username.eq."${userToLogin}",email.eq."${userToLogin}"`)
-        .eq('pin', password.trim())
-        .maybeSingle();
-
-      if (error || !profile) {
+      const { data: profile } = await api.users.login(userToLogin, password.trim());
+      if (!profile) {
         setErroAuth('Usuário ou PIN incorretos.');
         return;
       }
@@ -144,34 +136,21 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
     if (password.length < 4) { setErroAuth('O PIN deve ter no mínimo 4 números.'); setLoadingAuth(false); return; }
 
     try {
-      // 1. Verificar se o username ou email já existem
-      const { data: existente } = await supabase
-        .from('users')
-        .select('id')
-        .or(`username.eq."${username.trim().toLowerCase()}",email.eq."${email.trim().toLowerCase()}"`)
-        .maybeSingle();
-
+      const { data: existente } = await api.users.checkExists(username.trim().toLowerCase(), email.trim().toLowerCase());
       if (existente) {
         setErroAuth('Nome de usuário ou E-mail já cadastrado.');
         return;
       }
 
-      // 2. Criar o usuário diretamente na tabela unificada 'users'
-      const { error: errorPerfil } = await supabase
-        .from('users')
-        .insert([{
-          id: crypto.randomUUID(),
-          username: username.trim().toLowerCase(),
-          email: email.trim().toLowerCase(),
-          pin: password.trim(),
-          setor: setor.trim().toUpperCase(),
-          tipo_usuario: 'solicitante'
-        }])
-        .select()
-        .single();
-
-      // Tabela 'users' é unificada — não há mais necessidade de espelhar em 'colaborador'
-      if (errorPerfil) throw errorPerfil;
+      const { error: errorPerfil } = await api.users.insert({
+        id: crypto.randomUUID(),
+        username: username.trim().toLowerCase(),
+        email: email.trim().toLowerCase(),
+        pin: password.trim(),
+        setor: setor.trim().toUpperCase(),
+        tipo_usuario: 'solicitante'
+      });
+      if (errorPerfil) throw new Error(errorPerfil);
 
       setSucessoAuth('Conta criada com sucesso! Faça login.');
       setTimeout(() => { setViewMode('login'); setPassword(''); setConfirmPassword(''); }, 2000);
@@ -189,12 +168,10 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
     if (usuarioAtual) {
       const fetchItens = async () => {
         try {
-           // 1. DADOS DE INVENTÁRIO (Supabase - Tabela item)
-           const { data: supaItens, error: errorItens } = await supabase.from('item').select('*');
-           if (errorItens) throw errorItens;
+           const { data: supaItens, error: errorItens } = await api.items.list({ limit: 500 });
+           if (errorItens) throw new Error(errorItens);
            
-           // 2. STATUS DE OCUPAÇÃO
-           const { data: todosResultados } = await supabase.from('emprestimo').select('id, item_id, glpi_item_id, quantidade_emprestada, status_emprestimo, created_at, data_inicio_prevista, data_devolucao_prevista, data_hora_retorno');
+           const { data: todosResultados } = await api.emprestimos.list({ limit: 1000, select_fields: 'id,item_id,glpi_item_id,quantidade_emprestada,status_emprestimo,created_at,data_inicio_prevista,data_devolucao_prevista,data_hora_retorno' });
            
            // Processar disponibilidade
            const itensProcessados = (supaItens || []).map(i => {
@@ -227,12 +204,13 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
     if (usuarioAtual) {
       const fetchAlertas = async () => {
         try {
-          const { data } = await supabase.from('emprestimo')
-            .select('*')
-            .eq('nome_solicitante', usuarioAtual.get('username'))
-            .eq('status_emprestimo', 'Aberto')
-            .not('alerta_cobranca', 'is', null);
-          setAlertasCobranca((data || []).map(o => wrap(o)));
+          const { data } = await api.emprestimos.list({
+            nome_solicitante: usuarioAtual.get('username'),
+            status: 'Aberto',
+            limit: 50
+          });
+          // Filtra os que têm alerta_cobranca
+          setAlertasCobranca((data || []).filter(o => o.alerta_cobranca).map(o => wrap(o)));
         } catch (error) { console.error(error); }
       };
       fetchAlertas();
@@ -258,8 +236,7 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
     setLoadingHistorico(true);
     try {
         const nomeUsuario = usuarioAtual.get('username');
-        // Tudo fica em 'emprestimo' — única fonte de verdade
-        const { data: todos } = await supabase.from('emprestimo').select('id, protocolo, item_id, quantidade_emprestada, nome_solicitante, setor_solicitante, status_emprestimo, data_hora_retorno, data_devolucao_prevista, data_inicio_prevista, tempo_indeterminado, observacoes, created_at, updated_at, alerta_cobranca, quem_vai_buscar, quem_vai_entregar, nome_tecnico_saida, assinatura_eletronica, detalhes_assinatura, assinatura_dev_eletronica, detalhes_assinatura_dev, comprovante_saida, item(id, nome_equipamento, modelo_detalhes, quantidade, numero_serie)').ilike('nome_solicitante', nomeUsuario);
+        const { data: todos } = await api.emprestimos.list({ nome_solicitante: nomeUsuario, limit: 500 });
 
         const toDate = (s) => s ? new Date(s) : null;
         const listaUnificada = (todos || []).map(a => {
@@ -340,10 +317,11 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
             setPedidoSelecionado({...pedidoSelecionado, assinatura_dev_eletronica: true, detalhes_assinatura_dev: textoAssinatura, quem_vai_entregar: terceiro});
         }
 
-        // Tudo em 'emprestimo' — única fonte de verdade
         const idsNoGrupo = pedidoSelecionado.itens ? pedidoSelecionado.itens.map(i => i.id) : [pedidoSelecionado.id];
-        const { error } = await supabase.from('emprestimo').update(dataToUpdate).in('id', idsNoGrupo);
-        if (error) throw error;
+        const idsForUpdate = Array.isArray(idsNoGrupo) ? idsNoGrupo : [idsNoGrupo];
+        for (const eid of idsForUpdate) {
+          await api.emprestimos.update(eid, dataToUpdate);
+        }
 
         fetchHistorico();
         
@@ -562,8 +540,7 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
       const anoAtual = agoraProtocolo.getFullYear();
       const inicioAno = new Date(anoAtual, 0, 1).toISOString();
       
-      // Busca contagem de protocolos únicos para este ano
-      const { data: ultimosEmps } = await supabase.from('emprestimo').select('protocolo').gte('created_at', inicioAno).order('protocolo', { ascending: false }).limit(50);
+      const { data: ultimosEmps } = await api.emprestimos.protocolCount();
 
       let maiorSerial = 0;
       const processarSeriais = (list) => {
@@ -598,8 +575,8 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
             status_emprestimo: 'Pendente'
         };
         
-        const { error } = await supabase.from('emprestimo').insert(payload);
-        if (error) throw error;
+        const { error } = await api.emprestimos.insert(payload);
+        if (error) throw new Error(error);
       }
       setPedidoSucesso(true);
       logAction('SOLICITAÇÃO PORTAL - SUCESSO', { 

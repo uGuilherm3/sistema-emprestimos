@@ -3,7 +3,7 @@
 // Controla: autenticação, layout da sidebar, roteamento entre módulos e tema claro/escuro.
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { supabase } from './utils/supabaseClient';
+import { api } from './utils/apiClient';
 import {
   Home, Activity, CalendarDays, FileText, Settings,
   Search, Bell, LogOut,
@@ -471,11 +471,7 @@ export default function App() {
       const idSalvo = uidFromUrl || localStorage.getItem('tilend_user_id');
       if (idSalvo) {
         // Busca os dados do usuário na tabela 'users' pelo ID salvo
-        const { data: perfil } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', idSalvo)
-          .single();
+        const { data: perfil } = await api.users.get(idSalvo);
 
         if (perfil) {
           const userMock = {
@@ -517,10 +513,7 @@ export default function App() {
 
     const heartbeat = async () => {
       try {
-        await supabase
-          .from('users')
-          .update({ updated_at: new Date().toISOString() })
-          .eq('id', usuarioAtual.id);
+        await api.users.update(usuarioAtual.id, { updated_at: new Date().toISOString() });
       } catch (e) {
         console.error("Erro no heartbeat:", e);
       }
@@ -544,11 +537,11 @@ export default function App() {
 
           // 1. DADOS DO SUPABASE (Fonte de Verdade)
           const queries = [
-            supabase.from('item').select('id, nome_equipamento, quantidade, modelo_detalhes, numero_serie, bloqueado_insumo, glpi_id, glpi_type, glpi_ref'),
-            supabase.from('emprestimo').select('id, protocolo, item_id, status_emprestimo, quantidade_emprestada, created_at, nome_solicitante, item(id, nome_equipamento), glpi_item_id, observacoes').eq('status_emprestimo', 'Aberto').limit(200),
-            supabase.from('emprestimo').select('id, protocolo, item_id, status_emprestimo, quantidade_emprestada, data_hora_retorno, updated_at, nome_solicitante, item(id, nome_equipamento)').eq('status_emprestimo', 'Devolvido').gte('data_hora_retorno', startOfToday.toISOString()).limit(50),
-            supabase.from('emprestimo').select('id, protocolo, item_id, nome_solicitante, status_emprestimo, created_at, updated_at, item(id, nome_equipamento)').in('status_emprestimo', ['Pendente', 'Aprovado']).limit(100),
-            supabase.from('agenda_eventos').select('*').or(`tecnico.eq.${usuarioAtual.get('username')},participantes.cs.["${usuarioAtual.get('username')}"]`).eq('lembrete', true).gte('inicio', new Date().toISOString()).limit(15)
+            api.items.list(),
+            api.emprestimos.list({ status: 'Aberto', limit: 200 }),
+            api.emprestimos.list({ status: 'Devolvido', gte_data_hora_retorno: startOfToday.toISOString(), limit: 50 }),
+            api.emprestimos.list({ in_status: 'Pendente,Aprovado', limit: 100 }),
+            api.agenda.list({ tecnico: usuarioAtual.get('username'), lembrete: 'true', gte_inicio: new Date().toISOString() })
           ];
 
           let results = await Promise.all(queries);
@@ -556,7 +549,7 @@ export default function App() {
           // Fallback para lembretes caso a coluna participantes não exista
           if (results[4].error) {
             console.warn("Erro lembretes participantes, tentando fallback...");
-            results[4] = await supabase.from('agenda_eventos').select('*').eq('tecnico', usuarioAtual.get('username')).eq('lembrete', true).gte('inicio', new Date().toISOString()).limit(10);
+            results[4] = await api.agenda.list({ tecnico: usuarioAtual.get('username'), lembrete: 'true', gte_inicio: new Date().toISOString() });
           }
 
           const [resItens, resAbertosSupa, resRetornosSupa, resAgendamentosSupa, resLembretesSupa] = results;

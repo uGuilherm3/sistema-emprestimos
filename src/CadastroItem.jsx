@@ -1,6 +1,6 @@
 // src/CadastroItem.jsx
 import React, { useState } from 'react';
-import { supabase } from './utils/supabaseClient';
+import { api } from './utils/apiClient';
 import { PackagePlus, Tag, Hash, Box, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { logAction } from './utils/log';
 
@@ -46,8 +46,8 @@ export default function CadastroItem({ onItemCadastrado }) {
         bloqueado_insumo: bloqueadoInsumo
       };
 
-      const { error } = await supabase.from('item').insert(dataToInsert);
-      if (error) throw error;
+      const { error } = await api.items.insert(dataToInsert);
+      if (error) throw new Error(error);
 
       logAction('CRIOU ITEM', {
         item_nome: nomeEquipamento.trim().toUpperCase(),

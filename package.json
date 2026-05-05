@@ -5,17 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:full": "concurrently -n FRONT,EMAIL -c cyan,yellow \"vite\" \"cd backend && node --watch --env-file=.env server.js\"",
-    "dev:all": "concurrently -k -n shell,login,dashboard,emprestimos,portal,agenda,chamados,impressoras,relatorios,documentos,bot,perfil -c blue,green,cyan,magenta,yellow,red,white,gray,blueBright,greenBright,cyanBright,magentaBright \"vite\" \"pnpm --filter @tilend/login dev\" \"pnpm --filter @tilend/dashboard dev\" \"pnpm --filter @tilend/emprestimos dev\" \"pnpm --filter @tilend/portal dev\" \"pnpm --filter @tilend/agenda dev\" \"pnpm --filter @tilend/chamados dev\" \"pnpm --filter @tilend/impressoras dev\" \"pnpm --filter @tilend/relatorios dev\" \"pnpm --filter @tilend/documentos dev\" \"pnpm --filter @tilend/bot dev\" \"pnpm --filter @tilend/perfil dev\"",
-    "setup": "pnpm install",
+    "dev:full": "concurrently -n FRONT,API -c cyan,yellow \"vite\" \"cd backend && npm run dev\"",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.103.2",
     "@tailwindcss/vite": "^4.2.2",
     "events": "^3.3.0",
     "framer-motion": "^12.38.0",

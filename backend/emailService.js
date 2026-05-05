@@ -2,16 +2,25 @@
 // Serviço de E-mail GLPI — Fluxo "Anexar e Deletar"
 //
 // FLUXO:
-// 1. Download da foto/comprovante do Supabase Storage (Buffer)
+// 1. Lê o comprovante do sistema de arquivos local (pasta ./uploads/)
 // 2. Anexa nativamente no e-mail via Nodemailer
 // 3. Envia via SMTP para o GLPI Mailgate
-// 4. Após sucesso: deleta a imagem do Storage para preservar cota
+// 4. Após sucesso: deleta o arquivo local para liberar espaço
 //
 // EXECUÇÃO: node backend/emailService.js (standalone) ou importado como módulo
-// DEPENDÊNCIAS: npm install nodemailer @supabase/supabase-js
+// DEPENDÊNCIAS: npm install nodemailer mysql2
 
 import nodemailer from 'nodemailer';
-import { createClient } from '@supabase/supabase-js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Diretório base para uploads locais (equivalente aos buckets do Supabase)
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+
+// Garante que a pasta de uploads existe ao iniciar
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 // ─── Configuração ──────────────────────────────────────────────
 const SMTP_CONFIG = {
@@ -27,55 +36,49 @@ const SMTP_CONFIG = {
 const GLPI_MAILGATE = process.env.GLPI_EMAIL || 'chamados@oabce.org.br';
 const FROM_ADDRESS = `"TI LEND" <${SMTP_CONFIG.auth.user}>`;
 
-// Supabase com service_role key (necessário para deletar do Storage)
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://dtdybgimiecwsudofbpl.supabase.co';
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 const transporter = nodemailer.createTransport(SMTP_CONFIG);
 
 // ─── Funções Utilitárias ────────────────────────────────────────
 
 /**
- * Baixa um arquivo do Supabase Storage e retorna como Buffer.
- * @param {string} bucket - Nome do bucket (ex: 'comprovantes')
- * @param {string} filePath - Caminho do arquivo no bucket (ex: '2026/protocolo-001.jpg')
+ * Lê um arquivo do sistema de arquivos local (pasta uploads/).
+ * O `bucket` é tratado como subpasta dentro de UPLOADS_DIR.
+ * Ex: bucket='comprovantes', filePath='emprestimos/2026-0001/foto.jpg'
+ *
+ * @param {string} bucket   - Subpasta (ex: 'comprovantes')
+ * @param {string} filePath - Caminho relativo do arquivo dentro do bucket
  * @returns {{ buffer: Buffer, contentType: string, fileName: string }}
  */
-async function downloadFromStorage(bucket, filePath) {
-  const { data, error } = await supabase.storage
-    .from(bucket)
-    .download(filePath);
+function downloadFromStorage(bucket, filePath) {
+  const fullPath = path.join(UPLOADS_DIR, bucket, filePath);
 
-  if (error) {
-    throw new Error(`Erro ao baixar do Storage: ${error.message}`);
+  if (!fs.existsSync(fullPath)) {
+    throw new Error(`Arquivo não encontrado no storage local: ${fullPath}`);
   }
 
-  // Converte o Blob para Buffer (Node.js)
-  const arrayBuffer = await data.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  const fileName = filePath.split('/').pop();
-  const contentType = data.type || 'application/octet-stream';
+  const buffer = fs.readFileSync(fullPath);
+  const fileName = path.basename(filePath);
+  const ext = path.extname(filePath).toLowerCase();
+  const contentType = ext === '.pdf' ? 'application/pdf'
+    : ext === '.png' ? 'image/png'
+    : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
+    : 'application/octet-stream';
 
-  console.log(`[STORAGE] Download OK: ${filePath} (${buffer.length} bytes)`);
+  console.log(`[STORAGE] Lido: ${fullPath} (${buffer.length} bytes)`);
   return { buffer, contentType, fileName };
 }
 
 /**
- * Deleta um arquivo do Supabase Storage permanentemente.
- * @param {string} bucket - Nome do bucket
- * @param {string} filePath - Caminho do arquivo no bucket
+ * Deleta um arquivo do storage local permanentemente.
+ * @param {string} bucket   - Subpasta
+ * @param {string} filePath - Caminho relativo do arquivo
  */
-async function deleteFromStorage(bucket, filePath) {
-  const { error } = await supabase.storage
-    .from(bucket)
-    .remove([filePath]);
-
-  if (error) {
-    console.error(`[STORAGE] Erro ao deletar ${filePath}:`, error.message);
-    throw error;
+function deleteFromStorage(bucket, filePath) {
+  const fullPath = path.join(UPLOADS_DIR, bucket, filePath);
+  if (fs.existsSync(fullPath)) {
+    fs.unlinkSync(fullPath);
+    console.log(`[STORAGE] Arquivo deletado: ${fullPath}`);
   }
-  console.log(`[STORAGE] Arquivo deletado: ${filePath}`);
 }
 
 // ─── Funções Principais ─────────────────────────────────────────
@@ -287,33 +290,36 @@ Chamado pode ser encerrado.
  * @param {string} bucket - Nome do bucket
  * @param {string} protocoloPrefix - Prefixo do caminho (ex: 'emprestimos/2026-0001')
  */
-export async function limparComprovantesProtocolo(bucket, protocoloPrefix) {
-  const { data: files, error } = await supabase.storage
-    .from(bucket)
-    .list(protocoloPrefix);
+export function limparComprovantesProtocolo(bucket, protocoloPrefix) {
+  const dirPath = path.join(UPLOADS_DIR, bucket, protocoloPrefix);
 
-  if (error) {
-    console.error('[LIMPEZA] Erro ao listar arquivos:', error.message);
+  if (!fs.existsSync(dirPath)) {
+    console.log(`[LIMPEZA] Pasta não encontrada: ${dirPath}`);
     return { removidos: 0 };
   }
 
-  if (!files || files.length === 0) {
-    console.log(`[LIMPEZA] Nenhum arquivo encontrado em ${protocoloPrefix}`);
+  const files = fs.readdirSync(dirPath);
+
+  if (files.length === 0) {
+    console.log(`[LIMPEZA] Nenhum arquivo em ${dirPath}`);
     return { removidos: 0 };
   }
 
-  const filePaths = files.map(f => `${protocoloPrefix}/${f.name}`);
-  const { error: delError } = await supabase.storage
-    .from(bucket)
-    .remove(filePaths);
-
-  if (delError) {
-    console.error('[LIMPEZA] Erro ao remover arquivos:', delError.message);
-    return { removidos: 0 };
+  let removidos = 0;
+  for (const file of files) {
+    try {
+      fs.unlinkSync(path.join(dirPath, file));
+      removidos++;
+    } catch (e) {
+      console.error(`[LIMPEZA] Falha ao remover ${file}:`, e.message);
+    }
   }
 
-  console.log(`[LIMPEZA] ${filePaths.length} arquivo(s) removidos de ${protocoloPrefix}`);
-  return { removidos: filePaths.length };
+  // Remove a pasta se ficou vazia
+  try { fs.rmdirSync(dirPath); } catch (_) { /* ignora */ }
+
+  console.log(`[LIMPEZA] ${removidos} arquivo(s) removidos de ${dirPath}`);
+  return { removidos };
 }
 
 /**

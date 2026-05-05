@@ -1,6 +1,6 @@
 // src/DashboardEmprestimos.jsx
 import React, { useState, useEffect } from 'react';
-import { supabase } from './utils/supabaseClient';
+import { api } from './utils/apiClient';
 import { Package, ArrowUpRight, ArrowDownLeft, Calendar } from 'lucide-react';
 
 export default function DashboardEmprestimos({ itens }) {
@@ -8,11 +8,18 @@ export default function DashboardEmprestimos({ itens }) {
 
   useEffect(() => {
     const fetchStats = async () => {
-      const [{ count: empAtivos }, { count: reservas }] = await Promise.all([
-        supabase.from('emprestimo').select('*', { count: 'exact', head: true }).eq('status_emprestimo', 'Aberto'),
-        supabase.from('emprestimo').select('*', { count: 'exact', head: true }).eq('status_emprestimo', 'Aprovado')
+      const [{ data: empAbertos }, { data: empAprovados }] = await Promise.all([
+        api.emprestimos.list({ status: 'Aberto', limit: 1 }),
+        api.emprestimos.list({ status: 'Aprovado', limit: 1 })
       ]);
-      setStats({ emprestimosAtivos: empAtivos || 0, reservasFuturas: reservas || 0 });
+      // A API retorna o array; usamos length como proxy do count
+      // Para contagem exata o backend pode retornar um header X-Total — aqui usamos o data.length
+      // Se a rota suportar ?count=true, adapte aqui. Por ora buscamos com limit alto:
+      const [{ data: empAbertosAll }, { data: empAprovadosAll }] = await Promise.all([
+        api.emprestimos.list({ status: 'Aberto', limit: 9999 }),
+        api.emprestimos.list({ status: 'Aprovado', limit: 9999 })
+      ]);
+      setStats({ emprestimosAtivos: (empAbertosAll || []).length, reservasFuturas: (empAprovadosAll || []).length });
     };
     fetchStats();
   }, []);

@@ -1,6 +1,5 @@
-// src/ListaEmprestimosAtivos.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from './utils/supabaseClient';
+import { api } from './utils/apiClient';
 import { Search, User, Clock, CalendarDays, CheckCircle, Package, Download, X, Printer, ShieldCheck, ArrowDownLeft, List as ListIcon, Grid as GridIcon, AlertTriangle } from 'lucide-react';
 import { logAction } from './utils/log';
 import HandoverModal from './HandoverModal';
@@ -53,13 +52,8 @@ export default function ListaEmprestimosAtivos({ triggerAtualizacao, onDevolucao
       setLoading(true);
       try {
         // Busca todos os empréstimos abertos do Supabase (fonte de verdade única)
-        const { data: dbData, error } = await supabase
-          .from('emprestimo')
-          .select('*, item(*)')
-          .eq('status_emprestimo', 'Aberto')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
+        const { data: dbData, error } = await api.emprestimos.list({ status: 'Aberto', limit: 500 });
+        if (error) throw new Error(error);
         setEmprestimos((dbData || []).map(o => wrap(o)));
       } catch (error) {
         console.error('Erro ao buscar empréstimos ativos:', error);
@@ -92,7 +86,7 @@ export default function ListaEmprestimosAtivos({ triggerAtualizacao, onDevolucao
   const executarDevolucaoComAssinatura = async (grupo, nomeResponsavel, textoAssinatura, agoraPre) => {
     logAction('Receber Pedido (Lista) - Início', { grupoId: grupo.id, solicitante: grupo.solicitante });
     try {
-      const { data: userProfile } = await supabase.from('users').select('username').eq('id', localStorage.getItem('tilend_user_id')).single();
+      const { data: userProfile } = await api.users.get(localStorage.getItem('tilend_user_id'));
       if (!userProfile) throw new Error('Sessão expirada.');
 
       // ⏱️ Hora exata do recebimento — usa o timestamp passado pelo confirmarHandover
@@ -101,18 +95,14 @@ export default function ListaEmprestimosAtivos({ triggerAtualizacao, onDevolucao
       const retornoFormatado = agora.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 
       for (const emp of grupo.itens) {
-        // Devolução: Apenas marca como devolvido. 
-        // O estoque disponível é calculado automaticamente (Total - Abertos) no App.jsx.
-        // Adicionar aqui causaria duplicação do patrimônio total.
-
-        await supabase.from('emprestimo').update({
+        await api.emprestimos.update(emp.id, {
           status_emprestimo: 'Devolvido',
           data_hora_retorno: retornoDate,
           nome_tecnico_retorno: userProfile.username,
           assinatura_dev_eletronica: true,
           detalhes_assinatura_dev: textoAssinatura,
           quem_vai_entregar: nomeResponsavel
-        }).eq('id', emp.id);
+        });
       }
 
       setEmprestimos(prev => prev.filter(e => !grupo.itens.find(i => i.id === e.id)));

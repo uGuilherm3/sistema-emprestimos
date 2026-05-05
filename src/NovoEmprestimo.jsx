@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from './utils/supabaseClient';
+import { api } from './utils/apiClient';
 import { ArrowUpRight, User, Briefcase, Hash, Package, CheckCircle2, ShieldAlert, ChevronDown, ChevronUp, Plus, Trash2, FileText, UploadCloud, Globe, CalendarDays, Clock, Edit2, X, Printer, PenLine } from 'lucide-react';
 import { logAction } from './utils/log';
 import { enviarEmailEmprestimoAPI } from './utils/emailClient';
@@ -41,19 +41,19 @@ export default function NovoEmprestimo({ itensDisponiveis, onEmprestimoRealizado
 
   const fetchColaboradores = async () => {
     try {
-      const { data } = await supabase.from('users').select('*').order('nome', { ascending: true });
+      const { data } = await api.users.list({ order: 'nome', limit: 500 });
       setColaboradores(data || []);
     } catch (e) { console.error('Erro ao carregar colaboradores:', e); }
   };
 
   const handleAddColaborador = async () => {
     try {
-      const { error } = await supabase.from('users').insert({
+      const { error } = await api.users.insert({
         id: crypto.randomUUID(),
         nome: buscaColab.trim(),
         setor: setorNovo.trim().toUpperCase()
       });
-      if (error) throw error;
+      if (error) throw new Error(error);
       fetchColaboradores();
       setNomeSolicitante(buscaColab.trim());
       setSetorSolicitante(setorNovo.trim().toUpperCase());
@@ -72,11 +72,11 @@ export default function NovoEmprestimo({ itensDisponiveis, onEmprestimoRealizado
   const salvarEdicaoColab = async (e, id) => {
     e.stopPropagation();
     try {
-      const { error } = await supabase.from('users').update({
+      const { error } = await api.users.update(id, {
         nome: editNomeColab.trim(),
         setor: editSetorColab.trim().toUpperCase()
-      }).eq('id', id);
-      if (error) throw error;
+      });
+      if (error) throw new Error(error);
       setEditandoColab(null);
       fetchColaboradores();
       if (nomeSolicitante === editNomeColab.trim() || nomeSolicitante === '') {
@@ -90,15 +90,15 @@ export default function NovoEmprestimo({ itensDisponiveis, onEmprestimoRealizado
     e.stopPropagation();
     if (!window.confirm('Excluir este colaborador salvo?')) return;
     try {
-      const { error } = await supabase.from('users').delete().eq('id', id);
-      if (error) throw error;
+      const { error } = await api.users.delete(id);
+      if (error) throw new Error(error);
       fetchColaboradores();
     } catch (err) { alert(err.message); }
   };
 
   const fetchSolicitacoes = async () => {
     try {
-      const { data } = await supabase.from('emprestimo').select('*, item(*)').eq('status_emprestimo', 'Pendente').order('created_at', { ascending: true });
+      const { data } = await api.emprestimos.list({ status: 'Pendente' });
       setSolicitacoes(data || []);
     } catch (e) { console.error(e); }
   };
@@ -203,7 +203,7 @@ export default function NovoEmprestimo({ itensDisponiveis, onEmprestimoRealizado
       const novosEmprestimosGerados = [];
       const anoAtual = agora.getFullYear();
       const inicioAno = new Date(anoAtual, 0, 1).toISOString();
-      const { data: ultimosEmps } = await supabase.from('emprestimo').select('protocolo').gte('created_at', inicioAno).order('protocolo', { ascending: false }).limit(100);
+      const { data: ultimosEmps } = await api.emprestimos.protocolCount();
 
       let maiorSerial = 0;
       (ultimosEmps || []).forEach(e => {
@@ -221,13 +221,15 @@ export default function NovoEmprestimo({ itensDisponiveis, onEmprestimoRealizado
       let isUnique = false;
       while (!isUnique) {
         protocoloGerado = `${anoAtual}/${String(candidateSerial).padStart(4, '0')}${tipoSaida === 'Insumo' ? 'IS' : ''}`;
-        const { count } = await supabase.from('emprestimo').select('*', { count: 'exact', head: true }).eq('protocolo', protocoloGerado);
-        if ((count || 0) === 0) isUnique = true; else candidateSerial++;
+        // Verifica unicidade do protocolo na lista já buscada
+        const isDuplicate = (ultimosEmps || []).some(e => e.protocolo === protocoloGerado);
+        if (!isDuplicate) isUnique = true; else candidateSerial++;
       }
 
       for (const itemCart of carrinho) {
         const itemOriginal = (itensDisponiveis || []).find(i => i.id === itemCart.itemId);
-        const { data: empInserido, error: empError } = await supabase.from('emprestimo').insert({
+        const { data: empInserido, error: empError } = await api.emprestimos.insert({
+          id: crypto.randomUUID(),
           item_id: itemCart.itemId,
           quantidade_emprestada: itemCart.quantidade,
           nome_solicitante: nomeSolicitante.trim(),
@@ -241,14 +243,14 @@ export default function NovoEmprestimo({ itensDisponiveis, onEmprestimoRealizado
           quem_vai_buscar: nomeResponsavel,
           protocolo: protocoloGerado,
           glpi_item_id: itemOriginal?.glpi_id || null
-        }).select('*, item(*)').single();
-        if (empError) throw empError;
+        });
+        if (empError) throw new Error(empError);
         novosEmprestimosGerados.push(empInserido);
 
         // Se for INSUMO (Consumido), subtraímos definitivamente do total físico
         if (tipoSaida === 'Insumo' && itemOriginal) {
           const novaQtd = Math.max(0, (Number(itemOriginal.quantidade) || 0) - itemCart.quantidade);
-          await supabase.from('item').update({ quantidade: novaQtd }).eq('id', itemCart.itemId);
+          await api.items.update(itemCart.itemId, { quantidade: novaQtd });
         }
       }
 
@@ -276,22 +278,20 @@ export default function NovoEmprestimo({ itensDisponiveis, onEmprestimoRealizado
     if (!file || !reciboPronto) return;
     setUploadingSaida(true);
     try {
-      const protocolo = reciboPronto.emprestimosGerados?.[0]?.protocolo || 'sem-protocolo';
-      const storagePath = `emprestimos/${protocolo.replace(/\//g, '-')}/comprovante.${file.name.split('.').pop()}`;
-      await supabase.storage.from('comprovantes').upload(storagePath, file, { upsert: true });
-      await enviarEmailEmprestimoAPI({
-        protocolo, solicitante: reciboPronto.solicitante, setor: reciboPronto.setor,
-        itens: reciboPronto.itens.map(i => ({ nome: i.nome, quantidade: i.quantidade, serial: i.numero_serie || 'N/I' })),
-        tecnico: reciboPronto.tecnico_saida, observacoes: 'Comprovante anexado.', comprovante: { bucket: 'comprovantes', path: storagePath }
-      });
-      setReciboPronto({ ...reciboPronto, comprovanteSaidaSalvo: true });
-    } catch (e) { alert('Erro: ' + e.message); } finally { setUploadingSaida(false); }
+      // Faz upload do comprovante para o primeiro empréstimo gerado
+      const empId = reciboPronto.emprestimosGerados?.[0]?.id;
+      if (!empId) throw new Error('ID do empréstimo não encontrado.');
+      const { data, error } = await api.uploads.comprovante(empId, file, 'comprovante_saida');
+      if (error) throw new Error(error);
+      setReciboPronto(prev => ({ ...prev, comprovanteSaidaSalvo: true, comprovanteUrl: data?.url }));
+    } catch (e) { alert('Erro no upload: ' + e.message); }
+    finally { setUploadingSaida(false); }
   };
 
   const handleAprovar = async (ag) => {
     try {
       const ids = ag.isGrupo ? ag.ids : [ag.id];
-      await supabase.from('emprestimo').update({ status_emprestimo: 'Aprovado' }).in('id', ids);
+      await api.emprestimos.updateMany(ids, { status_emprestimo: 'Aprovado' });
       setMensagem({ texto: 'Reserva aprovada!', tipo: 'sucesso' });
       fetchSolicitacoes();
       setTimeout(() => setMensagem({ texto: '', tipo: '' }), 3000);
@@ -302,7 +302,7 @@ export default function NovoEmprestimo({ itensDisponiveis, onEmprestimoRealizado
     if (!window.confirm('Excluir?')) return;
     try {
       const ids = ag.isGrupo ? ag.ids : [ag.id];
-      await supabase.from('emprestimo').delete().in('id', ids);
+      await api.emprestimos.deleteMany(ids);
       setMensagem({ texto: 'Recusada.', tipo: 'sucesso' });
       fetchSolicitacoes();
       setTimeout(() => setMensagem({ texto: '', tipo: '' }), 3000);

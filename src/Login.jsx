@@ -1,6 +1,6 @@
 // src/Login.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from './utils/supabaseClient';
+import { api } from './utils/apiClient';
 import { loginGLPI } from './utils/glpiClient';
 import {
   ShieldAlert, CheckCircle2, ArrowLeft, Sun, Moon, LogOut,
@@ -237,7 +237,7 @@ export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
     const pinToLogin = password.trim();
 
     try {
-      const { data: user } = await supabase.from('users').select('*').or(`username.eq."${userToLogin}",email.eq."${userToLogin}"`).eq('pin', pinToLogin).single();
+      const { data: user } = await api.users.login(userToLogin, pinToLogin);
       if (user) return entrarLauncher(criarUserMock(user));
 
       const glpiUser = await loginGLPI(userToLogin, pinToLogin);
@@ -269,10 +269,10 @@ export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
     if (password.trim().length < 4) return setErro('O PIN deve ter no mínimo 4 caracteres.');
     setLoading(true);
     try {
-      const { data: existente } = await supabase.from('users').select('id').or(`username.eq."${username.trim().toLowerCase()}",email.eq."${email.trim().toLowerCase()}"`).maybeSingle();
+      const { data: existente } = await api.users.checkExists(username.trim().toLowerCase(), email.trim().toLowerCase());
       if (existente) return setErro('Nome de usuário ou e-mail já cadastrado.');
-      const { error } = await supabase.from('users').insert([{ id: crypto.randomUUID(), username: username.trim().toLowerCase(), email: email.trim().toLowerCase(), pin: password.trim(), nome: nome.trim(), setor: setor.trim().toUpperCase(), tipo_usuario: 'default' }]);
-      if (error) throw error;
+      const { error } = await api.users.insert({ id: crypto.randomUUID(), username: username.trim().toLowerCase(), email: email.trim().toLowerCase(), pin: password.trim(), nome: nome.trim(), setor: setor.trim().toUpperCase(), tipo_usuario: 'default' });
+      if (error) throw new Error(error);
       setSucesso('Conta criada! Faça login para continuar.');
       trocarTela('login');
     } catch (err) {

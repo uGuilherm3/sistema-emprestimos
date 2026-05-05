@@ -1,115 +1,76 @@
 // src/utils/estoqueService.js
-// Serviço de Estoque — Interface com as funções SQL do Supabase
-// Usa a tabela `inventario` como cache operacional do GLPI.
-
-import { supabase } from './supabaseClient';
+// Serviço de Estoque — Migrado de Supabase para API REST MariaDB
+import { api } from './apiClient';
 
 /**
- * Verifica se um item do inventário está disponível em um período.
- * Usa a função SQL `verificar_disponibilidade` que checa sobreposição de intervalos.
- *
- * @param {string} inventarioId - UUID do item na tabela `inventario`
- * @param {string|Date} dataInicio - Data/hora de início do empréstimo
- * @param {string|Date} dataFim - Data/hora de devolução prevista
- * @param {number} qtdDesejada - Quantidade que o usuário quer emprestar
- * @param {string|null} excluirEmpId - UUID de um empréstimo a ignorar (para edição)
- * @returns {{ disponivel: boolean, qtdTotal: number, qtdReservada: number, qtdDisponivel: number, conflitos: Array }}
+ * Verifica se um item está disponível em um período.
+ * Agora faz o cálculo no cliente com base nos empréstimos ativos do MariaDB.
  */
-export async function checarDisponibilidade(inventarioId, dataInicio, dataFim, qtdDesejada, excluirEmpId = null) {
+export async function checarDisponibilidade(itemId, dataInicio, dataFim, qtdDesejada, excluirEmpId = null) {
   const inicio = dataInicio instanceof Date ? dataInicio.toISOString() : dataInicio;
-  const fim = dataFim instanceof Date ? dataFim.toISOString() : dataFim;
+  const fim    = dataFim    instanceof Date ? dataFim.toISOString()    : dataFim;
 
-  const { data, error } = await supabase.rpc('verificar_disponibilidade', {
-    p_inventario_id: inventarioId,
-    p_data_inicio: inicio,
-    p_data_fim: fim,
-    p_excluir_emprestimo_id: excluirEmpId
+  // Busca item e seus empréstimos no período
+  const [{ data: item }, { data: emps }] = await Promise.all([
+    api.items.get(itemId),
+    api.emprestimos.list({ status: 'Aberto' })
+  ]);
+
+  if (!item) throw new Error('Item não encontrado');
+
+  // Filtra empréstimos desse item no período (com sobreposição de datas)
+  const conflitos = (emps || []).filter(e => {
+    if (e.item_id !== itemId) return false;
+    if (excluirEmpId && e.id === excluirEmpId) return false;
+    const eInicio = new Date(e.data_inicio_prevista || e.created_at);
+    const eFim    = new Date(e.data_devolucao_prevista || new Date(9999, 0));
+    return new Date(inicio) < eFim && eInicio < new Date(fim);
   });
 
-  if (error) {
-    console.error('[ESTOQUE] Erro ao verificar disponibilidade:', error);
-    throw new Error(error.message || 'Erro ao verificar disponibilidade');
-  }
-
-  const row = data?.[0];
-  if (!row) throw new Error('Nenhum dado retornado pela verificação de disponibilidade');
+  const qtdReservada  = conflitos.reduce((acc, e) => acc + (Number(e.quantidade_emprestada) || 1), 0);
+  const qtdTotal      = Number(item.quantidade) || 0;
+  const qtdDisponivel = Math.max(0, qtdTotal - qtdReservada);
 
   return {
-    disponivel: row.quantidade_disponivel >= qtdDesejada,
-    qtdTotal: row.quantidade_total,
-    qtdReservada: row.quantidade_reservada,
-    qtdDisponivel: row.quantidade_disponivel,
-    conflitos: row.conflitos || []
+    disponivel:    qtdDisponivel >= qtdDesejada,
+    qtdTotal,
+    qtdReservada,
+    qtdDisponivel,
+    conflitos
   };
 }
 
 /**
- * Busca todos os itens do inventário (cache local do GLPI).
- * Retorna com `quantidade_disponivel` já calculada pelo trigger.
- *
- * @param {{ apenasAtivos?: boolean, busca?: string }} opcoes
- * @returns {Array} Lista de itens do inventário
+ * Busca todos os itens do inventário.
  */
-export async function listarInventario({ apenasAtivos = true, busca = '' } = {}) {
-  let query = supabase.from('inventario')
-    .select('*')
-    .order('nome_equipamento', { ascending: true });
+export async function listarInventario({ busca = '' } = {}) {
+  const { data, error } = await api.items.list();
+  if (error) throw new Error(error);
 
-  if (apenasAtivos) {
-    query = query.eq('status_local', 'ativo');
-  }
-
+  let resultado = data || [];
   if (busca) {
-    query = query.or(`nome_equipamento.ilike.%${busca}%,modelo_detalhes.ilike.%${busca}%,numero_serie.ilike.%${busca}%`);
+    const b = busca.toLowerCase();
+    resultado = resultado.filter(i =>
+      (i.nome_equipamento || '').toLowerCase().includes(b) ||
+      (i.modelo_detalhes  || '').toLowerCase().includes(b) ||
+      (i.numero_serie     || '').toLowerCase().includes(b)
+    );
   }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('[ESTOQUE] Erro ao listar inventário:', error);
-    throw error;
-  }
-
-  return data || [];
+  return resultado;
 }
 
 /**
- * Atualiza campos editáveis localmente de um item do inventário.
- * Campos do GLPI (nome, quantidade_total) são preservados e só mudam via sync.
- *
- * @param {string} id - UUID do item
- * @param {object} campos - Campos editáveis: { status_local, notas_locais, bloqueado_insumo }
+ * Atualiza campos de um item do inventário.
  */
 export async function atualizarItemLocal(id, campos) {
-  const camposPermitidos = {};
-  if ('status_local' in campos) camposPermitidos.status_local = campos.status_local;
-  if ('notas_locais' in campos) camposPermitidos.notas_locais = campos.notas_locais;
-  if ('bloqueado_insumo' in campos) camposPermitidos.bloqueado_insumo = campos.bloqueado_insumo;
-
-  camposPermitidos.updated_at = new Date().toISOString();
-
-  const { data, error } = await supabase.from('inventario')
-    .update(camposPermitidos)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) {
-    console.error('[ESTOQUE] Erro ao atualizar item:', error);
-    throw error;
-  }
-
+  const { data, error } = await api.items.update(id, campos);
+  if (error) throw new Error(error);
   return data;
 }
 
 /**
- * Dispara o recálculo global de disponibilidade.
- * Útil após sincronização com o GLPI.
+ * Stub mantido por compatibilidade — não é mais necessário no MariaDB.
  */
 export async function recalcularEstoqueGlobal() {
-  const { error } = await supabase.rpc('recalcular_disponibilidade_global');
-  if (error) {
-    console.error('[ESTOQUE] Erro ao recalcular estoque global:', error);
-    throw error;
-  }
+  console.log('[ESTOQUE] recalcularEstoqueGlobal não necessário no MariaDB');
 }

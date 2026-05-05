@@ -21,7 +21,7 @@ async function initSession(credentials = null) {
   if (credentials) {
     const { username, password } = credentials;
     const auth = btoa(`${username}:${password}`);
-    headers['Authorization'] = `login_password ${auth}`;
+    headers['Authorization'] = `Basic ${auth}`;
   } else {
     headers['Authorization'] = `user_token ${USER_TOKEN}`;
   }

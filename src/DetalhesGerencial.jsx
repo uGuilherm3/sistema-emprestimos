@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from './utils/supabaseClient';
+import { api } from './utils/apiClient';
 import {
   ArrowLeft, Calendar, FileText, User,
   MapPin, Clock, ShieldCheck, Printer,
@@ -83,9 +83,14 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
     if (targetId && !protocoloQuery) {
       setLoading(true);
       try {
-        const { data: empData } = await supabase.from('emprestimo').select('*, item(*)').eq('id', targetId);
+      const { data: empData } = await api.emprestimos.list({ id_eq: targetId });
+      // Fallback: busca por ID direto
+      const result_data = empData || [];
+      // Tenta GET por ID direto
+      const { data: single } = await api.emprestimos.get(targetId);
+      const rows = single ? [single] : result_data;
         if (empData && empData.length > 0) {
-          const result = { tipo: 'emprestimo', dados: { ...wrap(empData[0]), itens: empData.map(o => wrap(o)) } };
+          const result = { tipo: 'emprestimo', dados: { ...wrap(rows[0]), itens: rows.map(o => wrap(o)) } };
           setInternalItem(result);
           if (setItemDetalhado) setItemDetalhado(result);
         }
@@ -114,10 +119,7 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
           }
         }
 
-        const { data: emps, error } = await supabase
-          .from('emprestimo')
-          .select('*, item(*)')
-          .eq('protocolo', protocoloQuery);
+        const { data: emps } = await api.emprestimos.list({ protocolo: protocoloQuery });
 
         if (emps && emps.length > 0) {
           const base = emps[0];
@@ -253,17 +255,17 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
       const agora = new Date();
       const textoAssinatura = `EQUIPAMENTO RETIRADO E TERMO ASSINADO POR AGENTE EM CONJUNTO COM ${nomeResponsavel.toUpperCase()} EM ${agora.toLocaleDateString('pt-BR')} ÀS ${agora.toLocaleTimeString('pt-BR')}`;
 
-      const { data: userProfile } = await supabase.from('users').select('username').eq('id', localStorage.getItem('tilend_user_id')).single();
+      const { data: userProfile } = await api.users.get(localStorage.getItem('tilend_user_id'));
 
       for (const emp of itens) {
-        await supabase.from('emprestimo').update({
+        await api.emprestimos.update(emp.id, {
           status_emprestimo: 'Aberto',
           nome_tecnico_saida: userProfile?.username || 'SISTEMA',
           assinatura_eletronica: true,
           detalhes_assinatura: textoAssinatura,
           quem_vai_buscar: nomeResponsavel,
           created_at: agora.toISOString()
-        }).eq('id', emp.id);
+        });
       }
 
       // PDF removido para evitar o erro do OKLCH e travamentos.
@@ -289,26 +291,20 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
       const agora = new Date();
       const textoAssinatura = `TERMO DE DEVOLUÇÃO ASSINADO POR AGENTE EM CONJUNTO COM ${nomeResponsavel.toUpperCase()} EM ${agora.toLocaleDateString('pt-BR')} ÀS ${agora.toLocaleTimeString('pt-BR')}`;
 
-      const { data: userProfile } = await supabase.from('users').select('username').eq('id', localStorage.getItem('tilend_user_id')).single();
+      const { data: userProfile } = await api.users.get(localStorage.getItem('tilend_user_id'));
       const retornoDate = agora.toISOString();
 
       logAction('Devolução via Detalhes - Início', { protocolo: dados.protocolo });
 
       for (const emp of itens) {
-        const itemId = emp.item_id || emp.get?.('item_id');
-
-        // Devolução: Apenas marca como devolvido.
-        // O estoque disponível é calculado automaticamente (Total - Abertos) no App.jsx.
-        // Adicionar aqui causaria duplicação do patrimônio total.
-
-        await supabase.from('emprestimo').update({
+        await api.emprestimos.update(emp.id, {
           status_emprestimo: 'Devolvido',
           data_hora_retorno: retornoDate,
           nome_tecnico_retorno: userProfile?.username || 'SISTEMA',
           assinatura_dev_eletronica: true,
           detalhes_assinatura_dev: textoAssinatura,
           quem_vai_entregar: nomeResponsavel
-        }).eq('id', emp.id);
+        });
       }
 
       // Automação GLPI (Solução Imediata)
@@ -347,9 +343,7 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
       logAction('Aprovação de Requisição - Início', { protocolo: dados.protocolo });
 
       for (const emp of itens) {
-        await supabase.from('emprestimo').update({
-          status_emprestimo: 'Aprovado'
-        }).eq('id', emp.id);
+        await api.emprestimos.update(emp.id, { status_emprestimo: 'Aprovado' });
       }
 
       logAction('Aprovação de Requisição - SUCESSO', { protocolo: dados.protocolo });
@@ -372,22 +366,14 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
       for (const emp of itens) {
         const itemId = emp.item_id || emp.get?.('item_id');
 
-        // Atualiza Estoque (Devolve a quantidade que estava reservada) se o item existir
         if (itemId) {
-          const { data: itemBanco } = await supabase.from('item').select('id, quantidade').eq('id', itemId).maybeSingle();
-
+          const { data: itemBanco } = await api.items.get(itemId);
           if (itemBanco) {
             const qtdReservada = emp.quantidade_emprestada || emp.get?.('quantidade_emprestada') || 1;
-            await supabase.from('item').update({
-              quantidade: (itemBanco.quantidade || 0) + qtdReservada
-            }).eq('id', itemBanco.id);
+            await api.items.update(itemBanco.id, { quantidade: (itemBanco.quantidade || 0) + qtdReservada });
           }
         }
-
-        // Atualiza Status do Emprestimo para 'Recusado'
-        await supabase.from('emprestimo').update({
-          status_emprestimo: 'Recusado'
-        }).eq('id', emp.id);
+        await api.emprestimos.update(emp.id, { status_emprestimo: 'Recusado' });
       }
 
       logAction('Recusa de Requisição - SUCESSO', { protocolo: dados.protocolo });

@@ -18,7 +18,7 @@ function getMachineIP() {
 }
 
 export default defineConfig({
-  base: '/sistema-emprestimos/',
+  base: '/sistemas/',
   server: {
     host: true,
     proxy: {
@@ -38,10 +38,10 @@ export default defineConfig({
       configureServer(server) {
         const ip = getMachineIP();
         
-        // Redireciona /sistema-emprestimos para /sistema-emprestimos/ se a barra faltar
+        // Redireciona /sistemas para /sistemas/ se a barra faltar
         server.middlewares.use((req, res, next) => {
-          if (req.url === '/sistema-emprestimos') {
-            res.writeHead(301, { Location: '/sistema-emprestimos/' });
+          if (req.url === '/sistemas') {
+            res.writeHead(301, { Location: '/sistemas/' });
             res.end();
             return;
           }

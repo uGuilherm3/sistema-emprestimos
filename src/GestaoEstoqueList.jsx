@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase } from './utils/supabaseClient';
+import { api } from './utils/apiClient';
 import { Search, Edit2, Trash2, Package, X, CheckCircle2, AlertTriangle, Save, RotateCw, Loader2 } from 'lucide-react';
 import { logAction } from './utils/log';
 
@@ -21,16 +21,16 @@ export default function GestaoEstoqueList({ itens, onItemEditadoOrExcluido, onRe
   const handleExcluir = async (id) => {
     if (!window.confirm('Tem certeza que deseja excluir este ativo do sistema?')) return;
     try {
-      const { data: item, error: fetchErr } = await supabase.from('item').select('*').eq('id', id).single();
-      if (fetchErr) throw fetchErr;
+      const { data: item, error: fetchErr } = await api.items.get(id);
+      if (fetchErr) throw new Error(fetchErr);
 
       logAction('EXCLUIU ITEM', {
         item_nome: item.nome_equipamento,
         detalhes: 'Item apagado permanentemente do banco de dados.'
       });
 
-      const { error: delErr } = await supabase.from('item').delete().eq('id', id);
-      if (delErr) throw delErr;
+      const { error: delErr } = await api.items.delete(id);
+      if (delErr) throw new Error(delErr);
 
       if (onItemEditadoOrExcluido) onItemEditadoOrExcluido();
     } catch (error) {
@@ -72,12 +72,8 @@ export default function GestaoEstoqueList({ itens, onItemEditadoOrExcluido, onRe
         bloqueado_insumo: editBloqueado
       };
 
-      const { error } = await supabase
-        .from('item')
-        .update(novosDados)
-        .eq('id', itemEditando.id);
-      
-      if (error) throw error;
+      const { error } = await api.items.update(itemEditando.id, novosDados);
+      if (error) throw new Error(error);
 
       let detalhesLog = qtdAntiga !== Number(editQuantidade) 
         ? `Alterou estoque físico de ${qtdAntiga} para ${editQuantidade}.`

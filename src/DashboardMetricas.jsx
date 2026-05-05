@@ -1,6 +1,6 @@
 // src/DashboardMetricas.jsx
 import React, { useState, useEffect } from 'react';
-import { supabase } from './utils/supabaseClient';
+import { api } from './utils/apiClient';
 import { Package, Repeat, Users, ListChecks, Search, Printer, Download, MoreHorizontal, RotateCcw, Zap, ShieldCheck, CalendarDays, ChevronRight, Activity, CheckCircle2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -47,8 +47,8 @@ const DashboardMetricas = React.memo(({ triggerAtualizacao, usuarioAtual, onOpen
     const fetchEverything = async () => {
       try {
         const [resEmp, resItens] = await Promise.all([
-          supabase.from('emprestimo').select('*, item(*)').order('updated_at', { ascending: false }).limit(2000),
-          supabase.from('item').select('*').order('updated_at', { ascending: false })
+          api.emprestimos.list({ limit: 2000 }),
+          api.items.list({ limit: 1000 })
         ]);
 
         let empsMock = (resEmp.data || []).map(e => ({
@@ -81,14 +81,16 @@ const DashboardMetricas = React.memo(({ triggerAtualizacao, usuarioAtual, onOpen
         hoje.setHours(0, 0, 0, 0);
 
         const [resUsers, resLogs, resProbeEmp, resProbeLog] = await Promise.all([
-          supabase.from('users').select('*').neq('tipo_usuario', 'solicitante').limit(200),
-          supabase.from('log_auditoria').select('*').gte('created_at', hoje.toISOString()).order('created_at', { ascending: false }).limit(14),
-          supabase.from('emprestimo').select('updated_at').order('updated_at', { ascending: false }).limit(1).single(),
-          supabase.from('log_auditoria').select('created_at').order('created_at', { ascending: false }).limit(1).single()
+          api.users.list({ limit: 200 }),
+          api.logs.list({ limit: 14 }),
+          api.emprestimos.list({ limit: 1 }),
+          api.logs.list({ limit: 1 })
         ]);
 
         // VERIFICAÇÃO INTELIGENTE DE MUDANÇA (FINGERPRINT)
-        const currentFingerprint = `${new Date(resProbeEmp.data?.updated_at).getTime() || 0}-${new Date(resProbeLog.data?.created_at).getTime() || 0}`;
+        const lastEmp = (resProbeEmp.data || [])[0];
+        const lastLog = (resProbeLog.data || [])[0];
+        const currentFingerprint = `${new Date(lastEmp?.updated_at).getTime() || 0}-${new Date(lastLog?.created_at).getTime() || 0}`;
         if (currentFingerprint !== lastFingerprint.current) {
           lastFingerprint.current = currentFingerprint;
           fetchEverything(); // Muda detectada: Sincronização Pesada

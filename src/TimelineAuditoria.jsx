@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from './utils/supabaseClient';
+import { api } from './utils/apiClient';
 import { 
   Zap, Plus, Edit3, Trash2, ArrowUpRight, ArrowDownLeft, 
   User, CheckCircle2, AlertCircle, Clock, History
@@ -13,13 +13,8 @@ export default function TimelineAuditoria({ triggerAtualizacao }) {
     const fetchLogs = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('log_auditoria')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(20);
-        
-        if (error) throw error;
+        const { data, error } = await api.logs.list({ limit: 20 });
+        if (error) throw new Error(error);
         setLogs(data || []);
       } catch (error) {
         console.error("Erro ao buscar logs:", error);
