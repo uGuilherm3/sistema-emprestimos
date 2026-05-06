@@ -52,7 +52,7 @@ const levenshtein = (a, b) => {
 const PERMISSIONS = {
   default:    new Set(['agenda', 'portal', 'perfil']),
   solicitante: new Set(['agenda', 'portal', 'perfil']),
-  tecnico:    new Set(['agenda', 'estoque', 'saidas', 'entradas', 'calendario', 'chamados_externos', 'impressoras', 'sessoes', 'bot_conhecimento', 'documentos', 'relatorios', 'portal', 'detalhes', 'perfil']),
+  tecnico:    new Set(['agenda', 'estoque', 'saidas', 'entradas', 'calendario', 'chamados_externos', 'impressoras', 'bot_conhecimento', 'relatorios', 'portal', 'detalhes', 'perfil']),
 };
 
 const FIRST_ALLOWED_ROUTE = {
@@ -70,11 +70,9 @@ const rotasGlobais = [
   { id: 'localizacoes', nome: 'Localização por Setor', icon: Globe, keywords: ['setor', 'localizacao', 'onde está', 'posse', 'ativos por área'] },
   { id: 'calendario', nome: 'Calendários de Agendamento', icon: CalendarDays, keywords: ['agenda', 'agendamento', 'reserva', 'datas'] },
   { id: 'chamados_externos', nome: 'Chamados', icon: LayoutGrid, keywords: ['chamado', 'externo', 'ajuda', 'suporte', 'helpdesk', 'web', 'tickets'] },
-  { id: 'impressoras', nome: 'Impressoras', icon: Printer, keywords: ['impressora', 'toner', 'impressao', 'papel', 'manutencao'] },
-  { id: 'sessoes', nome: 'Sessões', icon: ScreenShare, keywords: ['sessão', 'sessoes', 'remoto', 'acesso', 'pc', 'computador'] },
+  { id: 'impressoras', nome: 'Ativos', icon: Printer, keywords: ['impressora', 'toner', 'impressao', 'papel', 'manutencao'] },
   { id: 'bot_conhecimento', nome: 'Bot de Conhecimento', icon: MessageSquare, keywords: ['bot', 'ia', 'ajuda', 'pesquisa', 'conhecimento', 'perguntas', 'pergunta', 'experimental'] },
-  { id: 'documentos', nome: 'Arquivo de Documentos', icon: FileText, keywords: ['documento', 'termo', 'assinado', 'arquivo', 'comprovante', 'pdf', 'assinatura'] },
-  { id: 'relatorios', nome: 'Inteligência e Relatórios', icon: ListChecks, keywords: ['relatorio', 'exportar', 'csv', 'dados', 'tudo', 'transacoes passadas', 'excel', 'exportação'] },
+  { id: 'relatorios', nome: 'Inteligência e Relatórios', icon: FileText, keywords: ['relatorio', 'exportar', 'csv', 'dados', 'tudo', 'transacoes passadas', 'excel', 'exportação'] },
   { id: 'portal', nome: 'Portal do Solicitante', icon: ShoppingBag, keywords: ['portal', 'solicitante', 'público', 'loja', 'pedir', 'comprar', 'reserva'] },
   { id: 'perfil', nome: 'Configurações de Conta', icon: Settings, keywords: ['perfil', 'conta', 'senha', 'ajustes', 'sair', 'foto', 'username'] },
   { id: 'dashboard#historico-dashboard', nome: 'Histórico de Transações (Dashboard)', icon: ListChecks, keywords: ['historico', 'transacoes', 'auditoria', 'quem pegou', 'quem devolveu', 'entradas e saídas', 'timeline', 'lista de emprestimos'] }
@@ -103,6 +101,7 @@ export default function App() {
 
   const spotifyRef = useRef(null);
   const [itemDetalhado, setItemDetalhado] = useState(null);
+  const [loadingDetalhe, setLoadingDetalhe] = useState(false);
   const [triggerAtualizacao, setTriggerAtualizacao] = useState(0);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -495,6 +494,7 @@ export default function App() {
             save: async () => { /* Heartbeat mock */ }
           };
           setUsuarioAtual(userMock);
+          setIsLoadingAuth(false);
           return;
         }
         localStorage.removeItem('tilend_user_id');
@@ -758,6 +758,44 @@ export default function App() {
   const voltarDosDetalhes = () => { navigate(-1); };
   const handleLogout = async () => { localStorage.removeItem('tilend_user_id'); setUsuarioAtual(null); navigate('/'); };
 
+  // Ao recarregar direto numa rota de detalhe, recarrega os dados da API
+  useEffect(() => {
+    if (itemDetalhado || isLoadingAuth || !usuarioAtual) return;
+    const path = location.pathname.replace(/^\/|\/$/g, '');
+    const isDetalhe = /^\d{4}[-\/]\d+/.test(path) || path === 'detalhes';
+    if (!isDetalhe) return;
+
+    setLoadingDetalhe(true);
+    const CHAMADOS_BASE = import.meta.env.VITE_CHAMADOS_API_BASE || 'http://localhost:3000/api';
+    const normalizar = s => String(s || '').replace(/\//g, '-').toLowerCase().trim();
+    const pathNorm = normalizar(path);
+
+    fetch(`${CHAMADOS_BASE}/chamados`)
+      .then(r => r.ok ? r.json() : [])
+      .then(resposta => {
+        const lista = Array.isArray(resposta) ? resposta : (Array.isArray(resposta?.data) ? resposta.data : []);
+        const encontrado = lista.find(c =>
+          normalizar(c.protocolo) === pathNorm ||
+          normalizar(c.id) === pathNorm ||
+          String(c.id) === path
+        );
+        if (encontrado) { setItemDetalhado({ tipo: 'chamado', dados: encontrado }); setLoadingDetalhe(false); return; }
+        return api.emprestimos.list({ protocolo: path }).then(({ data }) => {
+          if (data?.[0]) { setItemDetalhado({ tipo: 'emprestimo', dados: data[0] }); }
+          else navigate('/', { replace: true });
+          setLoadingDetalhe(false);
+        }).catch(() => { navigate('/', { replace: true }); setLoadingDetalhe(false); });
+      })
+      .catch(() => {
+        // Chamados API falhou — tenta só nos empréstimos
+        api.emprestimos.list({ protocolo: path }).then(({ data }) => {
+          if (data?.[0]) { setItemDetalhado({ tipo: 'emprestimo', dados: data[0] }); }
+          else navigate('/', { replace: true });
+          setLoadingDetalhe(false);
+        }).catch(() => { setLoadingDetalhe(false); navigate('/', { replace: true }); });
+      });
+  }, [location.pathname, itemDetalhado, isLoadingAuth, usuarioAtual]);
+
 
   const handleSearchInput = (texto) => {
     setSearchQuery(texto);
@@ -860,8 +898,7 @@ export default function App() {
     'relatorios': { label: 'Inteligência e Relatórios', icon: FileText },
     'portal': { label: 'Portal do Solicitante', icon: ShoppingBag },
     'chamados_externos': { label: 'Chamados', icon: LayoutGrid },
-    'impressoras': { label: 'Gestão de Impressoras', icon: Printer },
-    'sessoes': { label: 'Sessões de Acesso (Beta)', icon: ScreenShare },
+    'impressoras': { label: 'Gestão de Ativos', icon: Printer },
     'bot_conhecimento': { label: 'Bot de Conhecimento', icon: MessageSquare },
     'perfil': { label: 'Configurações de Conta', icon: Settings },
     'detalhes': { label: 'Detalhamento Técnico', icon: ArrowLeft }
@@ -941,17 +978,7 @@ export default function App() {
               <button onClick={() => mudarAba('impressoras')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'impressoras' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
                 <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'impressoras' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
                 <Printer size={18} className="shrink-0 transition-transform group-hover:scale-110" />
-                <div className="sidebar-pill">Impressoras</div>
-              </button>
-            )}
-
-            {canAccess('sessoes') && (
-              <button onClick={() => mudarAba('sessoes')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'sessoes' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
-                <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'sessoes' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
-                <div className="relative">
-                  <ScreenShare size={18} className="shrink-0 transition-transform group-hover:scale-110" />
-                </div>
-                <div className="sidebar-pill">Sessões</div>
+                <div className="sidebar-pill">Ativos</div>
               </button>
             )}
 
@@ -985,7 +1012,7 @@ export default function App() {
                 <button onClick={() => { mudarAba('perfil'); setMenuPerfilPopoverAberto(false); }} className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-[var(--bg-hover)] dark:hover:bg-white/5 transition-all duration-300 font-medium border-b border-slate-100 dark:border-white/5 rounded-t-2xl">
                   <Settings size={16} className="shrink-0 text-[#254E70]" /> Editar Perfil
                 </button>
-                <button onClick={handleLogout} className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-[#8D3046] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-400/10 transition-all duration-300 font-medium rounded-b-2xl">
+                <button onClick={handleLogout} className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-hover)] dark:hover:bg-white/5 transition-all duration-300 font-medium rounded-b-2xl">
                   <LogOut size={16} className="shrink-0" /> Encerrar Sessão
                 </button>
               </div>
@@ -1009,8 +1036,17 @@ export default function App() {
 
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative bg-[var(--bg-page)] md:pt-0 transition-colors duration-300">
         <header className={`no-print flex items-center py-2 px-[0.6vw] justify-between shrink-0 bg-[var(--bg-page)]/70 backdrop-blur-xl transition-all duration-300 ${spotifyAberto || notificacoesAberto ? 'z-[10000]' : 'z-30'}`}>
-          <div className={`flex items-center gap-4 ${abaAtiva === 'detalhes' ? 'cursor-pointer hover:opacity-70 transition-all' : ''}`} onClick={abaAtiva === 'detalhes' ? voltarDosDetalhes : undefined}>
-            <div className="flex flex-col ml-2">
+          <div className="flex items-center gap-4">
+            {abaAtiva === 'detalhes' && (
+              <button 
+                onClick={voltarDosDetalhes}
+                className="bg-slate-200 dark:bg-white/10 p-2.5 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-white/20 hover:text-slate-900 dark:hover:text-white transition-all shadow-sm"
+                title="Voltar"
+              >
+                <ArrowLeft size={18} strokeWidth={2.5} />
+              </button>
+            )}
+            <div className={`flex flex-col ${abaAtiva === 'detalhes' ? '' : 'ml-2'}`}>
               <span className="text-lg font-bold text-slate-900 dark:text-white tracking-tight leading-none">
                 {abaAtiva === 'detalhes' && itemDetalhado?.dados
                   ? (itemDetalhado.dados.protocolo || itemDetalhado.dados.id?.split('-')[0].toUpperCase())
@@ -1226,7 +1262,7 @@ export default function App() {
                 className="p-2.5 rounded-2xl text-slate-500 dark:text-[#606060] hover:bg-[var(--bg-soft)] hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer shrink-0"
                 title={isDarkMode ? 'Modo Claro' : 'Modo Escuro'}
               >
-                {isDarkMode ? <Moon size={18} /> : <Sun size={18} />}
+                {isDarkMode ? <Moon size={20} strokeWidth={1.5} /> : <Sun size={20} strokeWidth={1.5} />}
               </button>
 
               {/* PLAYER SPOTIFY DINÂMICO */}
@@ -1343,7 +1379,7 @@ export default function App() {
         </header>
 
         <div className={`flex-1 custom-scrollbar ${abaAtiva === 'agenda' || abaAtiva === 'detalhes' || abaAtiva === 'chamados_externos' ? 'overflow-hidden' : 'overflow-y-auto'}`} onClick={() => { setNotificacoesAberto(false); setMenuPerfilPopoverAberto(false); setIsSearchOpen(false); }}>
-          <div className={`border-r border-transparent border-b border-transparent flex flex-col ${abaAtiva === 'agenda' ? 'h-[calc(100vh-82px)] pb-0' : ['detalhes', 'chamados_externos', 'saidas', 'estoque'].includes(abaAtiva) ? 'h-[calc(100vh-100px)] pb-[1%]' : 'min-h-full pb-[1%]'} m-[1%]`}>
+          <div className={`border-r border-transparent border-b border-transparent flex flex-col ${['agenda', 'detalhes'].includes(abaAtiva) ? 'h-[calc(100vh-82px)] pb-0 m-0 px-[1%] pt-[1%]' : ['chamados_externos', 'saidas', 'estoque'].includes(abaAtiva) ? 'h-[calc(100vh-100px)] pb-[1%] m-[1%]' : 'min-h-full pb-[1%] m-[1%]'}`}>
             <Routes>
               <Route path="/" element={<DashboardMetricas triggerAtualizacao={triggerAtualizacao} usuarioAtual={usuarioAtual} onOpenDetails={abrirDetalhes} />} />
               <Route path="/emprestimos" element={<div className="animate-in fade-in duration-500"><DashboardEmprestimos itens={itens} /></div>} />
@@ -1354,27 +1390,13 @@ export default function App() {
               <Route path="/calendario" element={<div className="animate-in fade-in duration-500"><CalendarioAgendamentos itensDisponiveis={itens} onOpenDetails={(tipo, dados) => abrirDetalhes(tipo, dados)} /></div>} />
               <Route path="/relatorios" element={<div className="animate-in fade-in duration-500"><RelatoriosExportacao /></div>} />
               <Route path="/portal" element={<div className="animate-in fade-in duration-500 h-full"><PortalSolicitante usuarioAtual={usuarioAtual} isEmbedded={true} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} externalAba={abaPortal} setExternalAba={setAbaPortal} /></div>} />
-              <Route path="/documentos" element={<div className="animate-in fade-in duration-500"><DocumentosAssinados /></div>} />
               <Route path="/bot_conhecimento" element={<div className="animate-in fade-in duration-500"><KnowledgeBot /></div>} />
               <Route path="/chamados_externos" element={<div className="animate-in fade-in duration-700"><ChamadosAdmin onOpenDetails={(dados) => abrirDetalhes('chamado', dados)} /></div>} />
               <Route path="/impressoras" element={<div className="animate-in fade-in duration-700"><PrintersAdmin /></div>} />
-              <Route path="/sessoes" element={
-                <div className="h-full flex flex-col items-center justify-center animate-in fade-in duration-500 text-center px-4">
-                  <ScreenShare size={48} className="text-slate-300 dark:text-[#303030] mb-4" strokeWidth={1.5} />
-                  <h2 className="text-xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">Gestão de Sessões</h2>
-                  <div className="flex items-center gap-2 bg-[#254E70]/10 text-[#254E70] dark:bg-[#254E70]/30 dark:text-blue-300 px-4 py-2.5 rounded-xl mb-4 border border-[#254E70]/20">
-                    <Sparkles size={16} className="animate-pulse" />
-                    <span className="text-xs font-bold uppercase tracking-widest">Funcionalidade em Fase de Testes</span>
-                  </div>
-                  <p className="text-sm text-slate-500 dark:text-[#808080] max-w-md font-medium leading-relaxed">
-                    Esta área está em desenvolvimento. Em breve você poderá monitorar e gerenciar sessões ativas e acesso remoto diretamente por aqui.
-                  </p>
-                </div>
-              } />
               <Route path="/perfil" element={<div className="animate-in fade-in duration-500 pt-4"><EditarPerfil usuarioAtual={usuarioAtual} onPerfilAtualizado={handleUpdatePerfilComplete} /></div>} />
-              <Route path="/:ano/:serial" element={<div className="h-full animate-in fade-in duration-500 px-4 md:px-6 pt-0 pb-10"><DetalhesGerencial itemDetalhado={itemDetalhado} setItemDetalhado={setItemDetalhado} onVoltar={voltarDosDetalhes} onUpdateItem={() => setTriggerAtualizacao(t => t + 1)} /></div>} />
-              <Route path="/:protocoloUnico" element={<div className="h-full animate-in fade-in duration-500 px-4 md:px-6 pt-0 pb-10"><DetalhesGerencial itemDetalhado={itemDetalhado} setItemDetalhado={setItemDetalhado} onVoltar={voltarDosDetalhes} onUpdateItem={() => setTriggerAtualizacao(t => t + 1)} /></div>} />
-              <Route path="/detalhes" element={<div className="h-full animate-in fade-in duration-500 px-4 md:px-6 pt-0 pb-10"><DetalhesGerencial itemDetalhado={itemDetalhado} setItemDetalhado={setItemDetalhado} onVoltar={voltarDosDetalhes} onUpdateItem={() => setTriggerAtualizacao(t => t + 1)} /></div>} />
+              <Route path="/:ano/:serial" element={itemDetalhado ? <div className="h-full animate-in fade-in duration-500 px-4 md:px-6 pt-0 pb-0"><DetalhesGerencial itemDetalhado={itemDetalhado} setItemDetalhado={setItemDetalhado} onVoltar={voltarDosDetalhes} onUpdateItem={() => setTriggerAtualizacao(t => t + 1)} /></div> : loadingDetalhe ? <div className="h-full flex items-center justify-center"><div className="w-8 h-8 border-2 border-[var(--accent)]/10 border-t-[var(--accent)] rounded-full animate-spin" /></div> : <Navigate to="/" replace />} />
+              <Route path="/:protocoloUnico" element={itemDetalhado ? <div className="h-full animate-in fade-in duration-500 px-4 md:px-6 pt-0 pb-0"><DetalhesGerencial itemDetalhado={itemDetalhado} setItemDetalhado={setItemDetalhado} onVoltar={voltarDosDetalhes} onUpdateItem={() => setTriggerAtualizacao(t => t + 1)} /></div> : loadingDetalhe ? <div className="h-full flex items-center justify-center"><div className="w-8 h-8 border-2 border-[var(--accent)]/10 border-t-[var(--accent)] rounded-full animate-spin" /></div> : <Navigate to="/" replace />} />
+              <Route path="/detalhes" element={itemDetalhado ? <div className="h-full animate-in fade-in duration-500 px-4 md:px-6 pt-0 pb-0"><DetalhesGerencial itemDetalhado={itemDetalhado} setItemDetalhado={setItemDetalhado} onVoltar={voltarDosDetalhes} onUpdateItem={() => setTriggerAtualizacao(t => t + 1)} /></div> : loadingDetalhe ? <div className="h-full flex items-center justify-center"><div className="w-8 h-8 border-2 border-[var(--accent)]/10 border-t-[var(--accent)] rounded-full animate-spin" /></div> : <Navigate to="/" replace />} />
             </Routes>
           </div>
         </div>

@@ -90,6 +90,13 @@ router.put('/:id', async (req, res) => {
     const body = req.body;
     const sets = Object.keys(body).map(k => `${k} = ?`);
     const vals = Object.values(body);
+    if (sets.length === 0) {
+      const [rows] = await db.query(
+        `SELECT id, username, nome, email, setor, tipo_usuario, atribuicao, foto_perfil, updated_at FROM users WHERE id = ?`,
+        [req.params.id]
+      );
+      return res.json({ data: rows[0], error: null });
+    }
     await db.query(
       `UPDATE users SET ${sets.join(', ')} WHERE id = ?`,
       [...vals, req.params.id]

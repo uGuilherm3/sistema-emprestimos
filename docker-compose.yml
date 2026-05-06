@@ -1,5 +1,4 @@
 services:
-  # Frontend: Nginx servindo o build do Vite (Porta 3030)
   app:
     build:
       context: .
@@ -7,17 +6,11 @@ services:
       - "3030:80"
     restart: unless-stopped
 
-  # Backend: Servidor Node.js com lembretes e e-mails (Porta 3001)
   backend:
     build:
       context: ./backend
-    container_name: ti-lend-backend
-    restart: always
     ports:
       - "3031:3001"
+    restart: unless-stopped
     env_file:
       - ./backend/.env
-    environment:
-      - DB_HOST=172.17.0.1  # Acessa o MariaDB direto no host via Docker bridge
-    extra_hosts:
-      - "host.docker.internal:host-gateway"

@@ -1,5 +1,6 @@
 // src/DashboardMetricas.jsx
 import React, { useState, useEffect } from 'react';
+import LogoImg from './assets/logo.jpg';
 import { api } from './utils/apiClient';
 import { Package, Repeat, Users, ListChecks, Search, Printer, Download, MoreHorizontal, RotateCcw, Zap, ShieldCheck, CalendarDays, ChevronRight, Activity, CheckCircle2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
@@ -1001,9 +1002,14 @@ const DashboardMetricas = React.memo(({ triggerAtualizacao, usuarioAtual, onOpen
             id="printable-pdf"
             className="bg-[var(--bg-card)] w-full max-w-2xl rounded-[2.5rem] p-12 shadow-2xl border border-slate-200 dark:border-white/10 my-auto print:shadow-none print:border-none print:m-0 print:w-full print:max-w-none"
           >
-            <div className="text-center pb-8 mb-8 border-b border-slate-200 dark:border-white/5 print:border-neutral-200">
+            <div className="text-center pb-8 mb-8 border-b border-slate-200 dark:border-white/5 print:border-neutral-200 flex flex-col items-center">
               <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#F59E0B] print:text-[#606060] mb-2">Comprovante de Equipamento</h4>
-              <p className="text-3xl font-black text-slate-900 dark:text-white print:text-black italic tracking-tighter">TI LEND.</p>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-sm overflow-hidden">
+                  <img src={LogoImg} className="w-full h-full object-cover" alt="Logo" />
+                </div>
+                <p className="text-3xl font-black text-slate-900 dark:text-white print:text-black italic tracking-tighter">TI LEND.</p>
+              </div>
             </div>
 
             <div className="space-y-8">

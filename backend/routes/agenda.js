@@ -14,6 +14,14 @@ const parse = (rows) =>
 
 const tryParse = (v) => { try { return JSON.parse(v); } catch { return v; } };
 
+// Converte ISO 8601 (ex: "2026-05-07T10:30:00.000Z") para formato MySQL ("2026-05-07 10:30:00")
+const toMysqlDatetime = (iso) => {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 19).replace('T', ' ');
+};
+
 // GET /api/agenda — lista eventos (filtro por tecnico + participantes)
 router.get('/', async (req, res) => {
   try {
@@ -70,7 +78,7 @@ router.post('/', async (req, res) => {
       `INSERT INTO agenda_eventos (id, titulo, categoria, cor, inicio, fim, tecnico, descricao, detalhes, link, fixado, banner, apresentacao, lembrete, participantes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        id, titulo, categoria, cor, inicio, fim, tecnico,
+        id, titulo, categoria, cor, toMysqlDatetime(inicio), toMysqlDatetime(fim), tecnico,
         JSON.stringify(Array.isArray(descricao) ? descricao : []),
         detalhes || null, link || null, fixado ? 1 : 0,
         banner || null, apresentacao || null, lembrete ? 1 : 0,
@@ -91,6 +99,9 @@ router.put('/:id', async (req, res) => {
     // Serializa arrays para JSON
     if (Array.isArray(body.descricao))     body.descricao     = JSON.stringify(body.descricao);
     if (Array.isArray(body.participantes)) body.participantes = JSON.stringify(body.participantes);
+    // Converte datas ISO para formato MySQL
+    if (body.inicio) body.inicio = toMysqlDatetime(body.inicio);
+    if (body.fim)    body.fim    = toMysqlDatetime(body.fim);
     const sets = Object.keys(body).map(k => `${k} = ?`);
     const vals = Object.values(body);
     await db.query(

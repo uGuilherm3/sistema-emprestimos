@@ -1,5 +1,6 @@
 import React from 'react';
 import { Clock, User, FileText, MessageSquare, AlertTriangle, ShieldCheck } from 'lucide-react';
+import LogoImg from './assets/logo.jpg';
 
 // 👇 Adicionada a URL base dinâmica puxando do .env do Vite
 const API_BASE_URL = import.meta.env.VITE_CHAMADOS_API_BASE || 'http://localhost:3000/api';
@@ -36,9 +37,9 @@ export default function TicketPreview({ dados }) {
   const dataAbertura = getSafeDate(data) || getSafeDate(criado_em) || getSafeDate(created_at);
 
   return (
-    <div className="ticket-container bg-[var(--bg-card)] backdrop-blur-xl flex flex-col pt-6 pb-6 px-6 md:px-10 relative overflow-y-auto min-h-full custom-scrollbar-thin">
+    <div className="ticket-container bg-[var(--bg-card)] backdrop-blur-xl flex flex-col flex-1 relative overflow-hidden min-h-full">
       {/* BRANDING COMPACTO */}
-      <div className="text-center pb-4 mb-4 flex justify-between items-end">
+      <div className="text-center pt-6 px-6 md:px-10 pb-4 shrink-0 flex justify-between items-end border-b border-slate-200 dark:border-white/5">
         <div className="text-left">
           <h4 className={titleSidebarStyle}>Ordem de Serviço Técnica</h4>
           <p className="text-xl font-black text-slate-900 dark:text-white italic tracking-tighter">HELP DESK.</p>
@@ -49,7 +50,7 @@ export default function TicketPreview({ dados }) {
         </div>
       </div>
 
-      <div className="flex-1 space-y-4">
+      <div className="flex-1 overflow-y-auto custom-scrollbar-thin px-6 md:px-10 py-4 space-y-4">
         {/* HEADER DATA COMPACTO */}
         <div className="bg-[var(--bg-soft)] p-5 rounded-[1.25rem]">
           <div className="flex justify-between items-start">
@@ -119,12 +120,17 @@ export default function TicketPreview({ dados }) {
 
 
         </div>
+      </div>
 
-        {/* FOOTER AUDIT COMPACTO */}
-        <div className="pt-4 mt-auto flex justify-between items-center opacity-50">
-          <div className="flex items-center gap-1.5">
-            <ShieldCheck size={14} className="text-emerald-600" />
-            <span className="text-[8px] font-bold uppercase tracking-widest">Documento Auditado</span>
+      {/* FOOTER AUDIT COMPACTO */}
+      <div className="pt-4 pb-6 px-6 md:px-10 shrink-0 flex justify-between items-center opacity-50 border-t border-slate-200 dark:border-white/5">
+        <div className="flex items-center gap-1.5">
+          <ShieldCheck size={14} className="text-emerald-600" />
+          <span className="text-[8px] font-bold uppercase tracking-widest">Documento Auditado</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded-sm overflow-hidden">
+            <img src={LogoImg} className="w-full h-full object-cover" alt="Logo" />
           </div>
           <p className="text-[8px] font-medium italic">TI LEND Management</p>
         </div>

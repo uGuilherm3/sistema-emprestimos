@@ -181,7 +181,7 @@ export default function PrintersAdmin() {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 animate-in fade-in duration-500">
         <div className="w-12 h-12 border-4 border-[var(--accent)]/10 border-t-[var(--accent)] rounded-full animate-spin"></div>
-        <p className="text-[10px] font-black text-slate-400 dark:text-[#606060] uppercase tracking-[0.3em]">Sincronizando Parque Gráfico...</p>
+        <p className="text-[10px] font-black text-slate-400 dark:text-[#606060] uppercase tracking-[0.3em]">Sincronizando Ativos...</p>
       </div>
     );
   }

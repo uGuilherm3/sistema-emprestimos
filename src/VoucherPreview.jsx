@@ -1,5 +1,5 @@
-import React from 'react';
 import { CalendarDays, Package, User, Clock, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import LogoImg from './assets/logo.jpg';
 
 export default function VoucherPreview({ dados, isPrintable = false }) {
   if (!dados) return null;
@@ -61,14 +61,21 @@ export default function VoucherPreview({ dados, isPrintable = false }) {
   };
 
   return (
-    <div className={`voucher-container bg-white dark:bg-white text-black pt-8 p-6 md:p-8 rounded-[2rem] shadow-2xl relative overflow-hidden min-h-full ${isPrintable ? 'print:shadow-none print:m-0 print:w-full print:max-w-none' : ''}`}>
+    <div className={`voucher-container bg-white dark:bg-white text-black pt-8 pb-4 relative overflow-hidden min-h-full flex flex-col flex-1 ${isPrintable ? 'print:shadow-none print:m-0 print:w-full print:max-w-none' : 'shadow-2xl rounded-[2rem]'}`}>
       {/* BRANDING COMPACTO */}
-      <div className="text-center pb-4 mb-4 border-b border-slate-100">
-        <h4 className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Documento de Controle de Ativos</h4>
-        <p className="text-2xl font-black text-slate-900 italic tracking-tighter">TI LEND.</p>
+      <div className="text-center pb-4 mb-2 border-b border-slate-100 flex flex-col items-center shrink-0 px-6 md:px-8">
+        <h4 className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-2 relative w-full">
+          Documento de Controle de Ativos
+        </h4>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-sm overflow-hidden">
+            <img src={LogoImg} className="w-full h-full object-cover" alt="Logo" />
+          </div>
+          <p className="text-xl font-black text-slate-900 italic tracking-tighter">TI LEND.</p>
+        </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="flex-1 overflow-y-auto custom-scrollbar-thin px-6 md:px-8 py-2 space-y-4 relative z-10">
         {/* INFO GRIDS COMPACTOS */}
         <div className="grid grid-cols-2 gap-4 bg-stone-50 p-5 rounded-[1.25rem]">
           <div>

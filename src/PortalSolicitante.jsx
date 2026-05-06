@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import LogoImg from './assets/logo.jpg';
 import { api } from './utils/apiClient';
 import { Search, ShoppingBag, Plus, Minus, Trash2, CalendarDays, Clock, FileText, Send, CheckCircle2, ArrowLeft, ShieldAlert, LogOut, Sun, Moon, Info, LayoutGrid, List, AlertTriangle, X, Download, UploadCloud, PenLine, ShieldCheck, Printer } from 'lucide-react';
 import CalendarioDisponibilidade from './CalendarioDisponibilidade';
@@ -731,7 +732,9 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
           <div className="flex items-center gap-10">
             <div className="flex items-center gap-3">
               {onVoltar && <button onClick={onVoltar} className="p-2 bg-slate-200 dark:bg-[var(--bg-card)]/10 rounded-xl text-slate-600 dark:text-white hover:bg-slate-300 dark:hover:bg-[var(--bg-card)]/20 transition-colors mr-2"><ArrowLeft size={16}/></button>}
-              <div className="w-10 h-10 bg-slate-900 dark:bg-white rounded-xl flex items-center justify-center shrink-0 shadow-lg"><span className="text-white dark:text-black font-black text-xs italic">TI</span></div>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg overflow-hidden">
+                <img src={LogoImg} className="w-full h-full object-cover" alt="Logo" />
+              </div>
               <div className="hidden sm:block">
                  <span className="text-xl font-black tracking-tight text-slate-900 dark:text-white block leading-none">TI LEND.</span>
                  <span className="text-[9px] font-bold text-[#10B981] uppercase tracking-widest">Portal Colaborador</span>
@@ -753,10 +756,10 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
                  <p className="text-xs font-bold text-slate-900 dark:text-white uppercase">{usuarioAtual.get('username')}</p>
                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-[#606060] mt-1">{usuarioAtual.get('setor') || 'Sem Setor'}</p>
               </div>
-              <button onClick={() => setIsDarkMode(!isDarkMode)} className="text-slate-500 dark:text-[#606060] hover:text-slate-900 dark:hover:text-white transition-colors p-2">
+              <button onClick={() => setIsDarkMode(!isDarkMode)} className="text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors p-2">
                  {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
               </button>
-              <button onClick={onLogout} className="flex items-center gap-2 p-2.5 bg-red-50 dark:bg-[#8D3046]/10 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-[#8D3046]/20 transition-colors" title="Sair da Conta">
+              <button onClick={onLogout} className="flex items-center gap-2 p-2.5 bg-[var(--bg-soft)] text-[var(--text-muted)] hover:text-[var(--text-main)] rounded-xl transition-colors" title="Sair da Conta">
                  <LogOut size={16} />
               </button>
           </div>

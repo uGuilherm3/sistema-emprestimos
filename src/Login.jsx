@@ -8,6 +8,7 @@ import {
   CalendarDays, LayoutGrid, Printer, MessageSquare, FileText, ListChecks,
   Laptop, ScreenShare, ArrowRight
 } from 'lucide-react';
+import LogoImg from './assets/logo.jpg';
 
 // ─── COMPONENTE: PARTÍCULAS MORFÁVEIS (PIXELS NÍTIDOS) ────────────────────────
 const MorphingParticlesCanvas = ({ Icon, isDarkMode }) => {
@@ -156,11 +157,9 @@ const MODULOS = [
   { id: 'agenda', nome: 'Agenda', descricao: 'Seus compromissos e tarefas', icon: Calendar, rota: '/agenda', roles: ['default', 'tecnico', 'adm'], main: true },
   { id: 'portal', nome: 'Portal', descricao: 'Solicitar equipamentos', icon: ShoppingBag, rota: '/portal', roles: ['default', 'tecnico', 'adm'], main: true },
   { id: 'chamados', nome: 'Chamados', descricao: 'Helpdesk e suporte técnico', icon: LayoutGrid, rota: '/chamados_externos', roles: ['tecnico', 'adm'], main: true },
-  { id: 'impressoras', nome: 'Impressoras', descricao: 'Gestão de impressoras e toners', icon: Printer, rota: '/impressoras', roles: ['tecnico', 'adm'], main: true },
+  { id: 'impressoras', nome: 'Ativos', descricao: 'Gestão de Ativos', icon: Printer, rota: '/impressoras', roles: ['tecnico', 'adm'], main: true },
   { id: 'bot', nome: 'Conhecimento', descricao: 'Pesquisar soluções e documentação', icon: MessageSquare, rota: '/bot_conhecimento', roles: ['tecnico', 'adm'], main: true },
-  { id: 'documentos', nome: 'Documentos', descricao: 'Arquivo de termos e PDFs', icon: FileText, rota: '/documentos', roles: ['tecnico', 'adm'], main: true },
-  { id: 'relatorios', nome: 'Relatórios', descricao: 'Inteligência e exportação de dados', icon: ListChecks, rota: '/relatorios', roles: ['tecnico', 'adm'], main: true },
-  { id: 'sessoes', nome: 'Sessões', descricao: 'Acesso remoto e sessões ativas', icon: ScreenShare, rota: '/sessoes', roles: ['tecnico', 'adm'], main: true },
+  { id: 'relatorios', nome: 'Relatórios', descricao: 'Inteligência e exportação de dados', icon: FileText, rota: '/relatorios', roles: ['tecnico', 'adm'], main: true },
 
   // SUBPÁGINAS (Não aparecem no launcher, são acessadas pelo menu interno do sistema)
   { id: 'emprestimos', nome: 'Dashboard Empréstimos', descricao: 'Visão geral de empréstimos', icon: Laptop, rota: '/emprestimos', roles: ['adm'], main: false },
@@ -311,17 +310,11 @@ export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
       {/* ── Painel Esquerdo: Formulário ou Bem-vindo ── */}
       <div className="relative p-10 md:p-16 lg:p-24 flex flex-col justify-center overflow-y-auto">
         <div className="absolute top-10 left-10 md:left-16 lg:left-24 flex items-center gap-3">
-          <div className="w-8 h-8 bg-slate-900 dark:bg-white flex items-center justify-center rounded-sm transition-colors duration-300">
-            <span className="text-white dark:text-black font-black text-[10px] italic">TI</span>
+          <div className="w-8 h-8 rounded-sm overflow-hidden transition-colors duration-300">
+            <img src={LogoImg} className="w-full h-full object-cover" alt="Logo" />
           </div>
           <h1 className="text-lg font-black tracking-tighter text-slate-900 dark:text-white transition-colors duration-300">TI LEND.</h1>
         </div>
-        <div className="absolute top-10 right-10 md:right-16 lg:right-24">
-          <button onClick={() => setIsDarkMode(!isDarkMode)} className="text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">
-            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-        </div>
-
         {viewMode === 'launcher' && userAutenticado ? (
           <div className="w-full max-w-2xl mx-auto mt-10 animate-in fade-in slide-in-from-left-8 duration-700">
             <div className="mb-12">
@@ -333,9 +326,6 @@ export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
                 Sua sessão foi iniciada com sucesso. Selecione um módulo ao lado para continuar.
               </p>
             </div>
-            <button onClick={() => { localStorage.removeItem('tilend_user_id'); setViewMode('login'); setUserAutenticado(null); }} className="flex items-center gap-2 text-[10px] text-slate-500 hover:text-slate-900 dark:hover:text-white font-bold uppercase tracking-widest mt-8">
-              <LogOut size={14} /> Sair
-            </button>
           </div>
         ) : (
           <div className="w-full max-w-2xl mx-auto mt-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
@@ -367,6 +357,16 @@ export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
         style={viewMode === 'launcher' ? { background: 'transparent' } : { background: grad }}
         onWheel={viewMode === 'launcher' ? handleWheel : undefined}
       >
+        <div className="absolute top-10 right-10 md:right-16 lg:right-24 flex items-center gap-6 z-50">
+          {viewMode === 'launcher' && userAutenticado && (
+            <button onClick={() => { localStorage.removeItem('tilend_user_id'); setViewMode('login'); setUserAutenticado(null); }} className="flex items-center gap-2 text-[10px] text-[var(--text-muted)] hover:text-[var(--text-main)] font-bold uppercase tracking-widest">
+              <LogOut size={14} /> Sair
+            </button>
+          )}
+          <button onClick={() => setIsDarkMode(!isDarkMode)} className={viewMode === 'launcher' ? "text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors" : "text-white/70 hover:text-white transition-colors"}>
+            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        </div>
         {viewMode === 'launcher' && moduloAtivo ? (
           <div className="w-full h-full flex flex-row p-0 animate-in fade-in duration-700 bg-[var(--bg-page)] dark:bg-black/20 overflow-hidden select-none">
 

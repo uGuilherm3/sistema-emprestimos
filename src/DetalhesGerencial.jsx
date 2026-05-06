@@ -25,6 +25,7 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
   const [loadingAction, setLoadingAction] = useState(false);
   const [showModalDevolucao, setShowModalDevolucao] = useState(false);
   const [showModalRetirada, setShowModalRetirada] = useState(false);
+  const [statusSelecionado, setStatusSelecionado] = useState(null);
   const pdfContainerRef = useRef(null);
 
   // Variável padronizada para os títulos/labels, com as classes EXATAS do Sidebar
@@ -167,6 +168,13 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
       navigate(`/${itemProp.dados.protocolo}`, { replace: true });
     }
   }, [itemProp, ano, serial, navigate]);
+
+  // Sincroniza status selecionado sempre que os dados do item mudarem
+  useEffect(() => {
+    const item = internalItem || itemProp;
+    const st = item?.dados?.status || item?.dados?.status_emprestimo;
+    if (st) setStatusSelecionado(st);
+  }, [internalItem, itemProp]);
 
   const itemDetalhado = internalItem || itemProp;
 
@@ -432,6 +440,20 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
           active: true,
           completed: true
         }));
+        // Adiciona o status atual se for diferente do último no histórico
+        const ultimoHist = histRaw[histRaw.length - 1];
+        const ultimoStatus = ultimoHist?.status?.toLowerCase().trim();
+        const statusAtual = dados.status?.toLowerCase().trim();
+        if (statusAtual && ultimoStatus && ultimoStatus !== statusAtual) {
+          milestones.push({
+            id: 'current-status',
+            label: dados.status?.toUpperCase(),
+            date: dados.atualizado_em || dados.updated_at || new Date().toISOString(),
+            text: dados.resolucao || dados.parecer || null,
+            active: true,
+            completed: true
+          });
+        }
       } else {
         // Fallback p/ chamados s/ histórico ou erro de carregamento (Mostra o marco atual dinamicamente)
         milestones = [
@@ -536,18 +558,18 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
   };
 
   return (
-    <div className="h-full flex flex-col animate-in fade-in duration-500 overflow-hidden relative">
+    <div className="h-full flex flex-col animate-in fade-in duration-500 overflow-hidden relative pb-6">
       {/* PAINEL DIVIDIDO (SPLIT SCREEN) */}
       <div className="flex-1 flex flex-col xl:flex-row overflow-hidden min-h-0">
 
         {/* LADO ESQUERDO: PREVISUALIZAÇÃO (DOCUMENTO) - EXPANDE NA IMPRESSÃO */}
         <div className="xl:flex-[0.6] h-full flex flex-col min-h-0 overflow-hidden rounded-[2.5rem] print-full-width print-container" ref={pdfContainerRef}>
-          <div className="flex-1 overflow-y-auto custom-scrollbar-thin">
-            <div className="h-full transform-gpu">
+          <div className="flex-1 overflow-y-auto custom-scrollbar-thin flex flex-col">
+            <div className="flex-1 transform-gpu flex flex-col">
               {tipo === 'emprestimo' ? (
-                <VoucherPreview dados={dados} isPrintable={true} />
+                <VoucherPreview dados={dados} isPrintable={true} onVoltar={onVoltar} />
               ) : (
-                <TicketPreview dados={dados} />
+                <TicketPreview dados={dados} onVoltar={onVoltar} />
               )}
             </div>
           </div>
@@ -677,15 +699,15 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
                         <div className="space-y-2">
                           <label className={titleSidebarStyle}>Novo Status</label>
                           <select
-                            id="ticket-status-select"
                             className="w-full bg-[var(--bg-card)] dark:bg-white/5 p-4 rounded-xl text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-[#254E70]/50"
-                            defaultValue={statusNormalizado}
+                            value={statusSelecionado || statusNormalizado || 'Aberto'}
+                            onChange={e => setStatusSelecionado(e.target.value)}
                             disabled={statusNormalizado === 'Concluído'}
                           >
                             <option className="bg-[var(--bg-card)] dark:bg-slate-900 text-slate-900 dark:text-white" value="Aberto">Aberto</option>
                             <option className="bg-[var(--bg-card)] dark:bg-slate-900 text-slate-900 dark:text-white" value="Em Atendimento">Em Atendimento</option>
                             <option className="bg-[var(--bg-card)] dark:bg-slate-900 text-slate-900 dark:text-white" value="Pendente">Pendente</option>
-                            <option className="bg-[var(--bg-card)] dark:bg-slate-900 text-slate-900 dark:text-white" value="Pendencia Concluída">Pendencia Concluída</option>
+                            <option className="bg-[var(--bg-card)] dark:bg-slate-900 text-slate-900 dark:text-white" value="Pendência Concluída">Pendência Concluída</option>
                             <option className="bg-[var(--bg-card)] dark:bg-slate-900 text-slate-900 dark:text-white" value="Concluído">Concluído</option>
                             <option className="bg-[var(--bg-card)] dark:bg-slate-900 text-slate-900 dark:text-white" value="Cancelado">Cancelado</option>
                           </select>
@@ -722,6 +744,22 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
                           id="ticket-resolution-text"
                           disabled={statusNormalizado === 'Concluído'}
                         />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* RESPOSTA DO SOLICITANTE (RESOLUÇÃO DE PENDÊNCIA) */}
+                  {tipo === 'chamado' && (dados.resposta_usuario || dados.resposta || dados.resposta_pendencia) && (
+                    <div className="space-y-2 mt-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                      <label className={titleSidebarStyle}>
+                        <span className="text-amber-500 dark:text-amber-400 uppercase tracking-widest text-[10px] font-black">
+                          Resposta do Usuário (Resolução de Pendência)
+                        </span>
+                      </label>
+                      <div className="bg-amber-50/60 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/20 p-4 rounded-xl">
+                        <p className="text-[11px] font-bold text-slate-700 dark:text-[#C0A060] leading-relaxed">
+                          {dados.resposta_usuario || dados.resposta || dados.resposta_pendencia}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -763,7 +801,7 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
           </div>
 
           {/* RODAPÉ DE AÇÕES - FIXO E TRANSPARENTE */}
-          <div className="no-print pt-6 px-6 md:px-10">
+          <div className="no-print pt-6 px-6 md:px-10 pb-0">
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-12 items-start">
               <div className="max-w-lg ml-auto w-full">
                 <div className="flex items-center gap-4">
@@ -831,9 +869,8 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
                       onClick={async () => {
                         if (statusNormalizado === 'Concluído') return;
 
-                        const statusSelectValue = document.getElementById('ticket-status-select')?.value;
                         const prioritySelectValue = document.getElementById('ticket-priority-select')?.value;
-                        const novoStatus = statusSelectValue || (statusNormalizado === 'Aberto' ? 'Em Atendimento' : 'Concluído');
+                        const novoStatus = statusSelecionado || statusNormalizado;
 
                         setLoadingAction(true);
                         try {

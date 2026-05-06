@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, ShieldCheck, PenLine, Info, CheckCircle2, Package, CalendarDays, BadgeCheck, ArrowUpRight } from 'lucide-react';
+import LogoImg from './assets/logo.jpg';
 
 /**
  * HandoverModal
@@ -53,9 +54,14 @@ export default function HandoverModal({ isOpen, onClose, onConfirm, tipo, solici
         </button>
 
         {/* CABEÇALHO */}
-        <div className="text-center pb-4 mb-4">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-[#254E70] dark:text-[#38bdf8] mb-1">Termo de Responsabilidade Eletrônico</h4>
-          <p className="text-3xl font-black text-slate-900 dark:text-white italic tracking-tighter">TI LEND.</p>
+        <div className="text-center pb-4 mb-4 flex flex-col items-center">
+          <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-[#254E70] dark:text-[#38bdf8] mb-2">Termo de Responsabilidade Eletrônico</h4>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-sm overflow-hidden">
+              <img src={LogoImg} className="w-full h-full object-cover" alt="Logo" />
+            </div>
+            <p className="text-3xl font-black text-slate-900 dark:text-white italic tracking-tighter">TI LEND.</p>
+          </div>
         </div>
 
         {/* ITENS */}

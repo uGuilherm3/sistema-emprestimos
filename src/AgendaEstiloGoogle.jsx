@@ -392,7 +392,7 @@ const AgendaEstiloGoogle = ({ usuarioAtual }) => {
       });
     } catch (error) {
       console.error("Erro ao salvar evento:", error);
-      setErrorMessage("Erro ao salvar no Supabase. Verifique a tabela 'agenda_eventos'.");
+      setErrorMessage(`Erro ao salvar evento: ${error?.message || error}. Verifique se a tabela 'agenda_eventos' existe no banco.`);
     } finally {
       setLoading(false);
     }
@@ -418,7 +418,7 @@ const AgendaEstiloGoogle = ({ usuarioAtual }) => {
       setEventoSelecionado(null);
     } catch (error) {
       console.error("Erro ao excluir evento:", error);
-      setErrorMessage("Erro ao excluir do Supabase.");
+      setErrorMessage(`Erro ao excluir evento: ${error?.message || error}.`);
     } finally {
       setLoading(false);
     }
