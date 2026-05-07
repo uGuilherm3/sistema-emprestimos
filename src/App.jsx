@@ -8,7 +8,7 @@ import {
   Home, Activity, CalendarDays, FileText, Settings,
   Search, Bell, LogOut,
   ChevronUp, ChevronDown, ArrowUpRight, ArrowDownLeft, X, Trash2,
-  Menu, Sun, Moon, Globe, Inbox, AlertTriangle, ArrowRight, ArrowLeft, CheckCircle2, ListChecks, Music, LayoutGrid, Printer, MessageSquare, Sparkles, Calendar, Laptop, ShoppingBag, FilePenLine, ScreenShare
+  Menu, Sun, Moon, Globe, Inbox, AlertTriangle, ArrowRight, ArrowLeft, CheckCircle2, ListChecks, Music, LayoutGrid, Printer, MessageSquare, Sparkles, Calendar, Laptop, ShoppingBag, FilePenLine, ScreenShare, Wrench
 } from 'lucide-react';
 import DashboardMetricas from './DashboardMetricas';
 import CadastroItem from './CadastroItem';
@@ -27,6 +27,7 @@ import KnowledgeBot from './KnowledgeBot';
 import ChatBotIA from './components/ChatBotIA';
 import AgendaEstiloGoogle from './AgendaEstiloGoogle';
 import DashboardEmprestimos from './DashboardEmprestimos';
+import Manutencoes from './Manutencoes';
 import Login from './Login'; // Tela de login + launcher de módulos
 import LogoImg from './assets/logo.jpg';
 
@@ -49,10 +50,30 @@ const levenshtein = (a, b) => {
   return matrix[b.length][a.length];
 };
 
+// Módulos exibidos na tela de seleção (launcher) após o login.
+// roles define quais tipos de usuário podem ver cada módulo.
+const LAUNCHER_MODULOS = [
+  { id: 'dashboard',        nome: 'Dashboard',   icon: Home,        rota: '/',                  roles: ['adm'] },
+  { id: 'agenda',           nome: 'Agenda',       icon: Calendar,    rota: '/agenda',             roles: ['default', 'tecnico', 'adm'] },
+  { id: 'estoque',          nome: 'Empréstimos',  icon: Laptop,      rota: '/estoque',            roles: ['tecnico', 'adm'] },
+  { id: 'portal',           nome: 'Portal',       icon: ShoppingBag, rota: '/portal',             roles: ['default', 'tecnico', 'adm'] },
+  { id: 'chamados_externos',nome: 'Chamados',     icon: LayoutGrid,  rota: '/chamados_externos',  roles: ['tecnico', 'adm'] },
+  { id: 'impressoras',      nome: 'Ativos',       icon: Printer,     rota: '/impressoras',        roles: ['tecnico', 'adm'] },
+  { id: 'manutencoes',      nome: 'Manutenções',  icon: Wrench,      rota: '/manutencoes',        roles: ['tecnico', 'adm'] },
+  { id: 'relatorios',       nome: 'Relatórios',   icon: FileText,    rota: '/relatorios',         roles: ['adm'] },
+];
+
+// Converte tipo_usuario do banco para o role simplificado usado no launcher e permissões.
+const tipoParaRole = (tipo) => {
+  if (['adm', 'admin'].includes(tipo)) return 'adm';
+  if (['tecnico', 'agente'].includes(tipo)) return 'tecnico';
+  return 'default';
+};
+
 const PERMISSIONS = {
   default:    new Set(['agenda', 'portal', 'perfil']),
   solicitante: new Set(['agenda', 'portal', 'perfil']),
-  tecnico:    new Set(['agenda', 'estoque', 'saidas', 'entradas', 'calendario', 'chamados_externos', 'impressoras', 'bot_conhecimento', 'relatorios', 'portal', 'detalhes', 'perfil']),
+  tecnico:    new Set(['agenda', 'estoque', 'saidas', 'entradas', 'calendario', 'chamados_externos', 'impressoras', 'bot_conhecimento', 'relatorios', 'portal', 'detalhes', 'perfil', 'manutencoes']),
 };
 
 const FIRST_ALLOWED_ROUTE = {
@@ -73,6 +94,7 @@ const rotasGlobais = [
   { id: 'impressoras', nome: 'Ativos', icon: Printer, keywords: ['impressora', 'toner', 'impressao', 'papel', 'manutencao'] },
   { id: 'bot_conhecimento', nome: 'Bot de Conhecimento', icon: MessageSquare, keywords: ['bot', 'ia', 'ajuda', 'pesquisa', 'conhecimento', 'perguntas', 'pergunta', 'experimental'] },
   { id: 'relatorios', nome: 'Inteligência e Relatórios', icon: FileText, keywords: ['relatorio', 'exportar', 'csv', 'dados', 'tudo', 'transacoes passadas', 'excel', 'exportação'] },
+  { id: 'manutencoes', nome: 'Manutenções', icon: Wrench, keywords: ['manutencao', 'reparo', 'conserto', 'limpeza', 'preventiva'] },
   { id: 'portal', nome: 'Portal do Solicitante', icon: ShoppingBag, keywords: ['portal', 'solicitante', 'público', 'loja', 'pedir', 'comprar', 'reserva'] },
   { id: 'perfil', nome: 'Configurações de Conta', icon: Settings, keywords: ['perfil', 'conta', 'senha', 'ajustes', 'sair', 'foto', 'username'] },
   { id: 'dashboard#historico-dashboard', nome: 'Histórico de Transações (Dashboard)', icon: ListChecks, keywords: ['historico', 'transacoes', 'auditoria', 'quem pegou', 'quem devolveu', 'entradas e saídas', 'timeline', 'lista de emprestimos'] }
@@ -85,6 +107,12 @@ export default function App() {
   // isLoadingAuth: true enquanto verifica se há sessão salva no localStorage.
   // Evita piscar a tela de login antes de terminar a verificação.
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+
+  // showLauncher: true logo após o login — exibe a tela de seleção de módulo
+  // antes de entrar no sistema. Volta a false quando o usuário escolhe um módulo.
+  const [showLauncher, setShowLauncher] = useState(false);
+  // animandoLauncher: controla a animação de saída da barra de módulos
+  const [animandoLauncher, setAnimandoLauncher] = useState(false);
 
   const [abaPortal, setAbaPortal] = useState('catalogo');
   const location = useLocation();
@@ -168,7 +196,8 @@ export default function App() {
   const SPOTIFY_CLIENT_ID = 'c754606c4d0147958e6a3fde0e007bf0';
 
   // Forçamos o link exatamente como está no seu Dashboard para evitar qualquer erro de detecção
-  const REDIRECT_URI = 'http://127.0.0.1:5173/sistema-emprestimos/';
+  // URI de callback do Spotify — deve estar cadastrada exatamente igual no Spotify Developer Dashboard
+  const REDIRECT_URI = `${window.location.origin}/sistemas/`;
 
   useEffect(() => {
     console.log("%c[Spotify Config]", "color: #1DB954; font-weight: bold; font-size: 14px;");
@@ -417,7 +446,7 @@ export default function App() {
   const loginSpotify = async () => {
     // Validação de segurança exigida pelo Spotify
     if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && window.location.protocol !== 'https:') {
-      alert("⚠️ BLOQUEIO DO SPOTIFY: O Spotify não permite login através de endereços de IP (como " + window.location.hostname + ") sem uma conexão segura HTTPS.\n\nPor favor, acesse o sistema através de:\nhttp://localhost:5173/sistema-emprestimos/\nou\n");
+      alert("⚠️ BLOQUEIO DO SPOTIFY: O Spotify não permite login através de endereços de IP (como " + window.location.hostname + ") sem uma conexão segura HTTPS.\n\nPor favor, acesse o sistema através de:\nhttp://localhost:5173/sistemas/\nou\nhttp://127.0.0.1:5173/sistemas/");
       return;
     }
 
@@ -726,9 +755,21 @@ export default function App() {
 
   // Chamado pelo componente Login quando o usuário escolhe um módulo no launcher.
   // Recebe o objeto do usuário e a rota escolhida, seta o estado e navega.
-  const handleLoginSucesso = (userMock, rotaSelecionada = '/') => {
+  const handleLoginSucesso = (userMock) => {
+    // Login concluído — seta o usuário e mostra o launcher para escolher o módulo
     setUsuarioAtual(userMock);
-    navigate(rotaSelecionada);
+    setShowLauncher(true);
+  };
+
+  // Chamado quando o usuário clica num módulo no launcher.
+  // Toca a animação de saída, depois navega para o módulo escolhido.
+  const abrirModuloLauncher = (rota) => {
+    setAnimandoLauncher(true);
+    setTimeout(() => {
+      setShowLauncher(false);
+      setAnimandoLauncher(false);
+      navigate(rota);
+    }, 680);
   };
 
   const handleUpdatePerfilComplete = (userAtualizado) => { setUsuarioAtual(null); setTimeout(() => { setUsuarioAtual(userAtualizado); }, 10); };
@@ -901,6 +942,7 @@ export default function App() {
     'impressoras': { label: 'Gestão de Ativos', icon: Printer },
     'bot_conhecimento': { label: 'Bot de Conhecimento', icon: MessageSquare },
     'perfil': { label: 'Configurações de Conta', icon: Settings },
+    'manutencoes': { label: 'Manutenções', icon: Wrench },
     'detalhes': { label: 'Detalhamento Técnico', icon: ArrowLeft }
   };
 
@@ -919,7 +961,7 @@ export default function App() {
 
       {isMobileMenuOpen && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden animate-in fade-in" onClick={() => setIsMobileMenuOpen(false)}></div>}
 
-      <aside className={`no-print fixed inset-y-0 left-0 z-[9999] p-[0.6vw] bg-[var(--bg-page)] flex flex-col h-screen transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 overflow-visible ${isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
+      <aside className={`no-print fixed inset-y-0 left-0 z-[9999] p-[0.6vw] bg-[var(--bg-page)] flex flex-col h-screen transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 overflow-visible ${isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'} ${showLauncher ? 'md:hidden' : ''}`}>
         <div className="h-10 flex items-center justify-center shrink-0">
           <div className="w-[39px] h-[39px] rounded-xl flex items-center justify-center shrink-0 transition-all overflow-hidden">
             <img src={LogoImg} className="w-full h-full object-cover" alt="Logo" />
@@ -974,6 +1016,14 @@ export default function App() {
               </button>
             )}
 
+            {canAccess('manutencoes') && (
+              <button onClick={() => mudarAba('manutencoes')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'manutencoes' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
+                <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'manutencoes' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
+                <Wrench size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+                <div className="sidebar-pill">Manutenções</div>
+              </button>
+            )}
+
             {canAccess('impressoras') && (
               <button onClick={() => mudarAba('impressoras')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'impressoras' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
                 <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'impressoras' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
@@ -982,7 +1032,7 @@ export default function App() {
               </button>
             )}
 
-            {canAccess('bot_conhecimento') && (
+            {/* {canAccess('bot_conhecimento') && (
               <button onClick={() => mudarAba('bot_conhecimento')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'bot_conhecimento' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
                 <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'bot_conhecimento' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
                 <div className="relative">
@@ -991,21 +1041,19 @@ export default function App() {
                 </div>
                 <div className="sidebar-pill">Conhecimento</div>
               </button>
-            )}
+            )} */}
 
             {canAccess('relatorios') && (
               <button onClick={() => mudarAba('relatorios')} className={`w-full flex items-center justify-center py-3.5 transition-all relative group cursor-pointer ${abaAtiva === 'relatorios' ? 'text-[#254E70]' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70]'}`}>
-                <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#8D3046] shadow-[0_0_12_rgba(141,48,70,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'relatorios' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
+                <div className={`absolute left-[-0.6vw] w-[5px] rounded-r-full bg-[#8D3046] shadow-[0_0_12px_rgba(141,48,70,0.6)] transition-all duration-300 top-1/2 -translate-y-1/2 ${abaAtiva === 'relatorios' ? 'h-6 opacity-100' : 'h-0 opacity-0 group-hover:h-6 group-hover:opacity-100'}`}></div>
                 <FileText size={18} className="shrink-0 transition-transform group-hover:scale-110" />
                 <div className="sidebar-pill">Relatórios</div>
               </button>
             )}
-
           </div>
         </div>
 
         <div className="shrink-0 flex flex-col gap-1 relative">
-
           <div className="relative w-full mt-2">
             {menuPerfilPopoverAberto && (
               <div className="absolute bottom-[calc(100%+12px)] left-0 w-56 bg-[var(--bg-card)] rounded-2xl z-50 animate-in slide-in-from-bottom-2 flex flex-col border border-slate-200 dark:border-white/10 shadow-2xl">
@@ -1037,6 +1085,8 @@ export default function App() {
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative bg-[var(--bg-page)] md:pt-0 transition-colors duration-300">
         <header className={`no-print flex items-center py-2 px-[0.6vw] justify-between shrink-0 bg-[var(--bg-page)]/70 backdrop-blur-xl transition-all duration-300 ${spotifyAberto || notificacoesAberto ? 'z-[10000]' : 'z-30'}`}>
           <div className="flex items-center gap-4">
+            {/* Esconde nome da página e botões contextuais no launcher */}
+            {!showLauncher && <>
             {abaAtiva === 'detalhes' && (
               <button 
                 onClick={voltarDosDetalhes}
@@ -1148,9 +1198,10 @@ export default function App() {
                 </button>
               </div>
             )}
+            </>}
           </div>
 
-          <div className="relative w-48 md:w-80 hidden sm:block z-50 ml-auto">
+          {!showLauncher && <div className="relative w-48 md:w-80 hidden sm:block z-50 ml-auto">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-[#606060]" />
             <input type="text" placeholder="Busca Inteligente..." value={searchQuery} onChange={(e) => handleSearchInput(e.target.value)} onFocus={() => { if (searchQuery) setIsSearchOpen(true) }} className="w-full pl-11 pr-4 py-3 bg-[var(--bg-card)] border-none rounded-2xl text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-[#254E70] transition-all" />
             {isSearchOpen && (
@@ -1184,7 +1235,7 @@ export default function App() {
                 </div>
               </>
             )}
-          </div>
+          </div>}
 
           <div className="flex items-center gap-4 ml-4">
             <div className={`relative ${notificacoesAberto ? 'z-[10000]' : 'z-10'}`}>
@@ -1378,6 +1429,69 @@ export default function App() {
           </div>
         </header>
 
+        {showLauncher ? (
+          /* ── LAUNCHER: conteúdo da tela de seleção de módulo ─────────────────
+             O header real do sistema já está renderizado acima, incluindo
+             notificações, dark mode, Spotify e foto de perfil.
+             Aqui mostramos só as boas-vindas e a barra horizontal de módulos. */
+          <div className="flex-1 flex flex-col animate-in fade-in duration-500">
+
+            {/* Boas-vindas centralizadas */}
+            <div
+              className="flex-1 flex flex-col items-center justify-center select-none"
+              style={{
+                opacity: animandoLauncher ? 0 : 1,
+                transform: animandoLauncher ? 'translateY(-28px)' : 'translateY(0)',
+                transition: 'opacity 450ms ease, transform 450ms ease',
+              }}
+            >
+              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-slate-400 dark:text-[#505050] mb-5">
+                Bem-vindo de volta
+              </p>
+              <h1 className="text-6xl md:text-8xl font-light tracking-tight text-slate-900 dark:text-white capitalize">
+                {usuarioAtual.get('nome') || usuarioAtual.get('username')}
+              </h1>
+              <p className="text-sm text-slate-400 dark:text-[#505050] mt-5">
+                Selecione um módulo abaixo para continuar
+              </p>
+            </div>
+
+            {/* Sidebar na horizontal — os mesmos botões do sidebar vertical,
+                deitados no rodapé. Ao clicar, "voam" para a esquerda (animação de saída). */}
+            <div className="flex justify-center pb-12 shrink-0">
+              <div
+                style={{
+                  opacity: animandoLauncher ? 0 : 1,
+                  transform: animandoLauncher ? 'translateX(-55vw) scale(0.82)' : 'translateX(0) scale(1)',
+                  transition: 'opacity 620ms cubic-bezier(0.4, 0, 0.2, 1), transform 620ms cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+                className="flex flex-row items-center gap-2 px-2"
+              >
+                {LAUNCHER_MODULOS
+                  .filter(m => m.roles.includes(tipoParaRole(usuarioAtual.get('tipoUsuario'))))
+                  .map((modulo) => {
+                    const Icon = modulo.icon;
+                    return (
+                      <button
+                        key={modulo.id}
+                        onClick={() => abrirModuloLauncher(modulo.rota)}
+                        disabled={animandoLauncher}
+                        className="group relative flex items-center justify-center w-14 h-14 transition-all duration-200 cursor-pointer text-slate-500 dark:text-[#606060] hover:text-[#254E70] dark:hover:text-white"
+                      >
+                        {/* Indicador azul no rodapé do botão ao hover */}
+                        <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 h-[5px] w-0 group-hover:w-6 rounded-t-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 opacity-0 group-hover:opacity-100" />
+                        <Icon size={18} className="shrink-0 transition-transform group-hover:scale-110" />
+                        {/* Tooltip balão acima do botão */}
+                        <div className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 px-[14px] py-[8px] bg-[#0f172a] dark:bg-white text-white dark:text-[#0f172a] text-[12px] font-medium rounded-full whitespace-nowrap pointer-events-none transition-all duration-300 opacity-0 translate-y-2 group-hover:translate-y-0 group-hover:opacity-100 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3)] dark:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.5)] border border-white/10 dark:border-black/10 z-[1000000]">
+                          {modulo.nome}
+                        </div>
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+          </div>
+        ) : (
         <div className={`flex-1 custom-scrollbar ${abaAtiva === 'agenda' || abaAtiva === 'detalhes' || abaAtiva === 'chamados_externos' ? 'overflow-hidden' : 'overflow-y-auto'}`} onClick={() => { setNotificacoesAberto(false); setMenuPerfilPopoverAberto(false); setIsSearchOpen(false); }}>
           <div className={`border-r border-transparent border-b border-transparent flex flex-col ${['agenda', 'detalhes'].includes(abaAtiva) ? 'h-[calc(100vh-82px)] pb-0 m-0 px-[1%] pt-[1%]' : ['chamados_externos', 'saidas', 'estoque'].includes(abaAtiva) ? 'h-[calc(100vh-100px)] pb-[1%] m-[1%]' : 'min-h-full pb-[1%] m-[1%]'}`}>
             <Routes>
@@ -1389,6 +1503,7 @@ export default function App() {
               <Route path="/agenda" element={<div className="animate-in fade-in duration-500 h-full w-full pb-0"><AgendaEstiloGoogle usuarioAtual={usuarioAtual} /></div>} />
               <Route path="/calendario" element={<div className="animate-in fade-in duration-500"><CalendarioAgendamentos itensDisponiveis={itens} onOpenDetails={(tipo, dados) => abrirDetalhes(tipo, dados)} /></div>} />
               <Route path="/relatorios" element={<div className="animate-in fade-in duration-500"><RelatoriosExportacao /></div>} />
+              <Route path="/manutencoes" element={<div className="animate-in fade-in duration-500"><Manutencoes /></div>} />
               <Route path="/portal" element={<div className="animate-in fade-in duration-500 h-full"><PortalSolicitante usuarioAtual={usuarioAtual} isEmbedded={true} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} externalAba={abaPortal} setExternalAba={setAbaPortal} /></div>} />
               <Route path="/bot_conhecimento" element={<div className="animate-in fade-in duration-500"><KnowledgeBot /></div>} />
               <Route path="/chamados_externos" element={<div className="animate-in fade-in duration-700"><ChamadosAdmin onOpenDetails={(dados) => abrirDetalhes('chamado', dados)} /></div>} />
@@ -1400,6 +1515,7 @@ export default function App() {
             </Routes>
           </div>
         </div>
+        )}
       </main>
       <ChatBotIA />
     </div>

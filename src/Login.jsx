@@ -2,12 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from './utils/apiClient';
 import { loginGLPI } from './utils/glpiClient';
-import {
-  ShieldAlert, CheckCircle2, ArrowLeft, Sun, Moon, LogOut,
-  Home, Calendar, ShoppingBag, Activity, ArrowUpRight, ArrowDownLeft,
-  CalendarDays, LayoutGrid, Printer, MessageSquare, FileText, ListChecks,
-  Laptop, ScreenShare, ArrowRight
-} from 'lucide-react';
+import { ShieldAlert, Sun, Moon } from 'lucide-react';
 import LogoImg from './assets/logo.jpg';
 
 // ─── COMPONENTE: PARTÍCULAS MORFÁVEIS (PIXELS NÍTIDOS) ────────────────────────
@@ -71,7 +66,7 @@ const MorphingParticlesCanvas = ({ Icon, isDarkMode }) => {
         offCtx.fillStyle = 'black';
         offCtx.fillRect(0, 0, width, height);
 
-        const iconSize = Math.min(width, height) * 0.55;
+        const iconSize = Math.min(width, height) * 0.65;
         const dx = (width - iconSize) / 2;
         const dy = (height - iconSize) / 2;
 
@@ -150,55 +145,14 @@ const MorphingParticlesCanvas = ({ Icon, isDarkMode }) => {
 };
 
 
-// ─── DEFINIÇÃO DOS MÓDULOS ────────────────────────────────────────────────────
-const MODULOS = [
-  { id: 'dashboard', nome: 'Dashboard', descricao: 'Métricas e indicadores gerais', icon: Home, rota: '/', roles: ['adm'], main: true },
-  { id: 'estoque', nome: 'Empréstimos', descricao: 'Gestão de ativos e empréstimos', icon: Laptop, rota: '/estoque', roles: ['tecnico', 'adm'], main: true },
-  { id: 'agenda', nome: 'Agenda', descricao: 'Seus compromissos e tarefas', icon: Calendar, rota: '/agenda', roles: ['default', 'tecnico', 'adm'], main: true },
-  { id: 'portal', nome: 'Portal', descricao: 'Solicitar equipamentos', icon: ShoppingBag, rota: '/portal', roles: ['default', 'tecnico', 'adm'], main: true },
-  { id: 'chamados', nome: 'Chamados', descricao: 'Helpdesk e suporte técnico', icon: LayoutGrid, rota: '/chamados_externos', roles: ['tecnico', 'adm'], main: true },
-  { id: 'impressoras', nome: 'Ativos', descricao: 'Gestão de Ativos', icon: Printer, rota: '/impressoras', roles: ['tecnico', 'adm'], main: true },
-  { id: 'bot', nome: 'Conhecimento', descricao: 'Pesquisar soluções e documentação', icon: MessageSquare, rota: '/bot_conhecimento', roles: ['tecnico', 'adm'], main: true },
-  { id: 'relatorios', nome: 'Relatórios', descricao: 'Inteligência e exportação de dados', icon: FileText, rota: '/relatorios', roles: ['tecnico', 'adm'], main: true },
-
-  // SUBPÁGINAS (Não aparecem no launcher, são acessadas pelo menu interno do sistema)
-  { id: 'emprestimos', nome: 'Dashboard Empréstimos', descricao: 'Visão geral de empréstimos', icon: Laptop, rota: '/emprestimos', roles: ['adm'], main: false },
-  { id: 'saidas', nome: 'Registro de Saídas', descricao: 'Registrar novos empréstimos', icon: ArrowUpRight, rota: '/saidas', roles: ['tecnico', 'adm'], main: false },
-  { id: 'entradas', nome: 'Devoluções', descricao: 'Gerenciar devoluções ativas', icon: ArrowDownLeft, rota: '/entradas', roles: ['tecnico', 'adm'], main: false },
-  { id: 'calendario', nome: 'Calendário', descricao: 'Agendamentos de equipamentos', icon: CalendarDays, rota: '/calendario', roles: ['tecnico', 'adm'], main: false },
-];
-
-function resolverPermissao(tipoUsuario) {
-  if (['adm', 'admin'].includes(tipoUsuario)) return 'adm';
-  if (['tecnico', 'agente'].includes(tipoUsuario)) return 'tecnico';
-  return 'default';
-}
-
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
 
-  const [viewMode, setViewMode] = useState('login');
-  const [activeModuleIndex, setActiveModuleIndex] = useState(0);
-
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
-  const [sucesso, setSucesso] = useState('');
-  const [userAutenticado, setUserAutenticado] = useState(null);
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [nome, setNome] = useState('');
-  const [email, setEmail] = useState('');
-  const [setor, setSetor] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-
-  const trocarTela = (tela) => {
-    setViewMode(tela);
-    setErro('');
-    setSucesso('');
-    setPassword('');
-    setConfirmPassword('');
-  };
 
   const criarUserMock = (dados) => ({
     id: dados.id,
@@ -217,14 +171,9 @@ export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
   });
 
   const entrarLauncher = (userMock) => {
+    // Salva o ID localmente e entrega o controle pro App.jsx mostrar o launcher real
     localStorage.setItem('tilend_user_id', userMock.id);
-    setUserAutenticado(userMock);
-    setViewMode('launcher');
-    setActiveModuleIndex(0);
-  };
-
-  const abrirModulo = (rota) => {
-    onLoginSucesso(userAutenticado, rota);
+    onLoginSucesso(userMock);
   };
 
   const handleLogin = async (e) => {
@@ -261,48 +210,9 @@ export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
     }
   };
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setErro('');
-    if (password !== confirmPassword) return setErro('As senhas não coincidem.');
-    if (password.trim().length < 4) return setErro('O PIN deve ter no mínimo 4 caracteres.');
-    setLoading(true);
-    try {
-      const { data: existente } = await api.users.checkExists(username.trim().toLowerCase(), email.trim().toLowerCase());
-      if (existente) return setErro('Nome de usuário ou e-mail já cadastrado.');
-      const { error } = await api.users.insert({ id: crypto.randomUUID(), username: username.trim().toLowerCase(), email: email.trim().toLowerCase(), pin: password.trim(), nome: nome.trim(), setor: setor.trim().toUpperCase(), tipo_usuario: 'default' });
-      if (error) throw new Error(error);
-      setSucesso('Conta criada! Faça login para continuar.');
-      trocarTela('login');
-    } catch (err) {
-      setErro('Erro ao criar conta.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const inputClass = `w-full bg-[var(--bg-soft)] dark:bg-[var(--bg-card)]/5 ring-inset focus:ring-2 text-slate-900 dark:text-white px-4 py-3 rounded-xl outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-[#404040] text-sm`;
   const labelClass = 'block text-[10px] font-bold uppercase text-slate-500 dark:text-[#A0A0A0] tracking-widest mb-1';
   const grad = 'linear-gradient(to bottom right, #254E70, #8D3046)';
-
-  const permissao = userAutenticado ? resolverPermissao(userAutenticado.get('tipoUsuario')) : 'default';
-  const modulosPermitidos = userAutenticado ? MODULOS.filter(m => m.roles.includes(permissao) && m.main) : [];
-  const moduloAtivo = modulosPermitidos[activeModuleIndex];
-
-  // ─── LÓGICA DE SCROLL ────────────────────────────────────────────────────────
-  const isScrolling = useRef(false);
-  const handleWheel = (e) => {
-    if (isScrolling.current || modulosPermitidos.length === 0) return;
-
-    isScrolling.current = true;
-    setTimeout(() => { isScrolling.current = false; }, 350);
-
-    if (e.deltaY > 0) {
-      setActiveModuleIndex(prev => Math.min(prev + 1, modulosPermitidos.length - 1));
-    } else if (e.deltaY < 0) {
-      setActiveModuleIndex(prev => Math.max(prev - 1, 0));
-    }
-  };
 
   return (
     <div className="min-h-screen bg-[var(--bg-page)] grid grid-cols-1 lg:grid-cols-2 animate-in fade-in duration-700 font-sans transition-colors duration-300">
@@ -315,23 +225,9 @@ export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
           </div>
           <h1 className="text-lg font-black tracking-tighter text-slate-900 dark:text-white transition-colors duration-300">TI LEND.</h1>
         </div>
-        {viewMode === 'launcher' && userAutenticado ? (
-          <div className="w-full max-w-2xl mx-auto mt-10 animate-in fade-in slide-in-from-left-8 duration-700">
-            <div className="mb-12">
-              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-500 dark:text-[#606060] mb-3">Bem-vindo de volta</p>
-              <h2 className="text-5xl md:text-6xl font-light tracking-tight text-slate-900 dark:text-white capitalize">
-                {userAutenticado.get('nome') || userAutenticado.get('username')}
-              </h2>
-              <p className="text-sm text-slate-500 dark:text-[#606060] mt-3 font-medium">
-                Sua sessão foi iniciada com sucesso. Selecione um módulo ao lado para continuar.
-              </p>
-            </div>
-          </div>
-        ) : (
           <div className="w-full max-w-2xl mx-auto mt-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
             <div className="mb-16"><h2 className="text-slate-900 dark:text-white text-5xl font-light tracking-tight">Login</h2></div>
             {erro && <div className="flex items-center gap-2.5 p-4 bg-red-50 dark:bg-red-500/10 border-l-2 border-red-500 text-red-600 dark:text-red-400 text-xs font-semibold mb-8"><ShieldAlert size={16} /><span>{erro}</span></div>}
-            {sucesso && <div className="flex items-center gap-2.5 p-4 bg-emerald-50 dark:bg-emerald-500/10 border-l-2 border-emerald-500 text-emerald-600 dark:text-emerald-400 text-xs font-semibold mb-8"><CheckCircle2 size={16} /><span>{sucesso}</span></div>}
             <form onSubmit={handleLogin} className="relative">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
                 <div>
@@ -348,95 +244,15 @@ export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
               </div>
             </form>
           </div>
-        )}
       </div>
 
-      {/* ── Painel Direito: Onde a Magia do Launcher Acontece ── */}
-      <div
-        className={`relative ${viewMode === 'launcher' ? 'flex' : 'hidden lg:flex'} h-full transition-all duration-700`}
-        style={viewMode === 'launcher' ? { background: 'transparent' } : { background: grad }}
-        onWheel={viewMode === 'launcher' ? handleWheel : undefined}
-      >
-        <div className="absolute top-10 right-10 md:right-16 lg:right-24 flex items-center gap-6 z-50">
-          {viewMode === 'launcher' && userAutenticado && (
-            <button onClick={() => { localStorage.removeItem('tilend_user_id'); setViewMode('login'); setUserAutenticado(null); }} className="flex items-center gap-2 text-[10px] text-[var(--text-muted)] hover:text-[var(--text-main)] font-bold uppercase tracking-widest">
-              <LogOut size={14} /> Sair
-            </button>
-          )}
-          <button onClick={() => setIsDarkMode(!isDarkMode)} className={viewMode === 'launcher' ? "text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors" : "text-white/70 hover:text-white transition-colors"}>
+      {/* Painel direito: fundo decorativo gradiente */}
+      <div className="hidden lg:flex h-full" style={{ background: grad }}>
+        <div className="w-full h-full relative flex items-center justify-center">
+          <button onClick={() => setIsDarkMode(!isDarkMode)} className="absolute top-10 right-10 text-white/70 hover:text-white transition-colors">
             {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
         </div>
-        {viewMode === 'launcher' && moduloAtivo ? (
-          <div className="w-full h-full flex flex-row p-0 animate-in fade-in duration-700 bg-[var(--bg-page)] dark:bg-black/20 overflow-hidden select-none">
-
-            {/* Conteúdo Central: Canvas e Info do Módulo */}
-            <div className="flex-1 flex flex-col justify-between py-32 px-10 md:px-12 lg:px-24 relative overflow-hidden">
-
-              {/* O CANVAS METAMÓRFICO BASEADO NO ÍCONE DO MÓDULO */}
-              <div className="w-full h-[45%] flex justify-center mb-8 mx-auto relative pointer-events-none">
-                <MorphingParticlesCanvas
-                  Icon={moduloAtivo.icon}
-                  isDarkMode={isDarkMode}
-                />
-              </div>
-
-              {/* INFO DO MÓDULO (Design limpo) */}
-              <div className="min-h-[140px] animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-lg w-full relative z-10 mx-auto">
-                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-500 dark:text-[#606060] mb-4">
-                  Módulo Selecionado
-                </p>
-
-                <h3 className="text-4xl md:text-5xl font-light tracking-tight text-slate-900 dark:text-white mb-2">
-                  {moduloAtivo.nome}
-                </h3>
-
-                <p className="text-sm text-slate-500 dark:text-[#606060] mt-3 font-medium">
-                  {moduloAtivo.descricao}
-                </p>
-
-                <div className="mt-8">
-                  <button
-                    onClick={() => abrirModulo(moduloAtivo.rota)}
-                    className="flex w-max items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-900 dark:text-white hover:opacity-70 transition-opacity"
-                  >
-                    Acessar <ArrowRight size={14} />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* ÍCONE DE SCROLL CENTRALIZADO NO RODAPÉ */}
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 opacity-30 pointer-events-none z-20 flex flex-col items-center gap-1">
-              <div className="w-4 h-6 border-[1.5px] border-slate-400 dark:border-[#606060] rounded-full flex justify-center p-0.5">
-                <div className="w-1 h-1.5 bg-slate-400 dark:bg-[#606060] rounded-full animate-bounce mt-0.5" />
-              </div>
-            </div>
-
-            {/* BARRA LATERAL MINIMALISTA (Indicadores de Scroll) */}
-            <div className="w-16 shrink-0 flex flex-col items-center justify-center py-10 z-10 relative">
-              <div className="flex flex-col gap-3">
-                {modulosPermitidos.map((modulo, index) => {
-                  const isActive = index === activeModuleIndex;
-                  return (
-                    <button
-                      key={modulo.id}
-                      onClick={() => setActiveModuleIndex(index)}
-                      className={`transition-all duration-500 ${isActive
-                        ? 'h-10 w-[6px] bg-slate-900 dark:bg-white shadow-[0_0_10px_rgba(0,0,0,0.1)] dark:shadow-[0_0_10px_rgba(255,255,255,0.2)]'
-                        : 'h-2 w-[4px] bg-slate-300 dark:bg-white/20 hover:bg-slate-400 dark:hover:bg-white/40 cursor-pointer'
-                        }`}
-                      aria-label={`Selecionar módulo ${modulo.nome}`}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-
-          </div>
-        ) : (
-          <div className="w-full h-full relative flex items-center justify-center animate-in fade-in duration-1000" />
-        )}
       </div>
 
     </div>

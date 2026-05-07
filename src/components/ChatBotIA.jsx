@@ -60,12 +60,12 @@ const ChatBotIA = () => {
 
     return (
         <div className="fixed bottom-6 right-6 z-50">
-            {/* Bubble Button */}
+            {/* Bubble Button — oculto temporariamente */}
             <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-14 h-14 bg-accent rounded-full flex items-center justify-center text-white shadow-2xl transition-all duration-300 hover:shadow-accent/40"
+                className="hidden w-14 h-14 bg-accent rounded-full flex items-center justify-center text-white shadow-2xl transition-all duration-300 hover:shadow-accent/40"
                 style={{ backgroundColor: 'var(--accent)' }}
             >
                 {isOpen ? <X size={24} /> : <Bot size={28} />}
