@@ -128,6 +128,7 @@ export default function App() {
   }, [location.pathname]);
 
   const spotifyRef = useRef(null);
+  const menuPerfilRef = useRef(null);
   const [itemDetalhado, setItemDetalhado] = useState(null);
   const [loadingDetalhe, setLoadingDetalhe] = useState(false);
   const [triggerAtualizacao, setTriggerAtualizacao] = useState(0);
@@ -182,6 +183,21 @@ export default function App() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [spotifyAberto]);
+
+  // FECHAR MENU PERFIL AO CLICAR FORA
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuPerfilRef.current && !menuPerfilRef.current.contains(event.target)) {
+        setMenuPerfilPopoverAberto(false);
+      }
+    }
+    if (menuPerfilPopoverAberto) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [menuPerfilPopoverAberto]);
 
   // Tenta renovar token ao carregar se estiver sem access_token mas com refresh_token
   useEffect(() => {
@@ -715,6 +731,47 @@ export default function App() {
             });
           });
 
+          // 4. CHAMADOS INTERNOS (novo chamado ou mudança de status)
+          const CHAMADOS_BASE = import.meta.env.VITE_CHAMADOS_API_BASE;
+          if (CHAMADOS_BASE) {
+            try {
+              const resp = await fetch(`${CHAMADOS_BASE}/chamados`);
+              if (resp.ok) {
+                const raw = await resp.json();
+                const chamados = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+                const snapshotRaw = localStorage.getItem('tilend_chamados_snapshot');
+                const snapshot = snapshotRaw ? JSON.parse(snapshotRaw) : {};
+                const novoSnapshot = {};
+                chamados.forEach(c => {
+                  novoSnapshot[String(c.id)] = c.status;
+                  const isNovo = !snapshot[String(c.id)] && Object.keys(snapshot).length > 0;
+                  const statusMudou = snapshot[String(c.id)] && snapshot[String(c.id)] !== c.status;
+                  const dataRef = new Date(c.atualizado_em || c.updated_at || c.criado_em || c.created_at || Date.now());
+                  if (isNovo) {
+                    arrayNotificacoesBrutas.push({
+                      id: `chamado-novo-${c.id}`,
+                      tipo: 'chamado_novo',
+                      protocolo: c.protocolo || String(c.id),
+                      texto: `${c.titulo || 'Novo chamado'} — ${c.nome_solicitante || c.solicitante || ''}`.trim().replace(/—\s*$/, ''),
+                      hora: dataRef.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                      data: dataRef,
+                    });
+                  } else if (statusMudou) {
+                    arrayNotificacoesBrutas.push({
+                      id: `chamado-status-${c.id}-${c.status}`,
+                      tipo: 'chamado_status',
+                      protocolo: c.protocolo || String(c.id),
+                      texto: `"${c.titulo || 'Chamado'}" mudou para ${c.status}`,
+                      hora: dataRef.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                      data: dataRef,
+                    });
+                  }
+                });
+                localStorage.setItem('tilend_chamados_snapshot', JSON.stringify(novoSnapshot));
+              }
+            } catch (_) { /* API de chamados indisponível */ }
+          }
+
           const newNotifs = arrayNotificacoesBrutas.sort((a, b) => b.data.getTime() - a.data.getTime()).slice(0, 40);
           setNotificacoes(newNotifs);
 
@@ -730,6 +787,13 @@ export default function App() {
       fetchData();
     }
   }, [triggerAtualizacao, usuarioAtual]);
+
+  // Polling de 60s para detectar novos chamados e mudanças de status
+  useEffect(() => {
+    if (!usuarioAtual || usuarioAtual.get('tipoUsuario') === 'solicitante') return;
+    const id = setInterval(() => setTriggerAtualizacao(t => t + 1), 30000);
+    return () => clearInterval(id);
+  }, [usuarioAtual]);
 
   useEffect(() => {
     if (notificacoesAberto && notificacoes.length > 0) {
@@ -785,6 +849,7 @@ export default function App() {
     }
     navigate(id === 'dashboard' ? '/' : `/${id}`);
     setIsMobileMenuOpen(false);
+    setMenuPerfilPopoverAberto(false);
   };
 
   const abrirDetalhes = (tipo, dados) => {
@@ -1054,7 +1119,7 @@ export default function App() {
         </div>
 
         <div className="shrink-0 flex flex-col gap-1 relative">
-          <div className="relative w-full mt-2">
+          <div ref={menuPerfilRef} className="relative w-full mt-2">
             {menuPerfilPopoverAberto && (
               <div className="absolute bottom-[calc(100%+12px)] left-0 w-56 bg-[var(--bg-card)] rounded-2xl z-50 animate-in slide-in-from-bottom-2 flex flex-col border border-slate-200 dark:border-white/10 shadow-2xl">
                 <button onClick={() => { mudarAba('perfil'); setMenuPerfilPopoverAberto(false); }} className="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-[var(--bg-hover)] dark:hover:bg-white/5 transition-all duration-300 font-medium border-b border-slate-100 dark:border-white/5 rounded-t-2xl">
@@ -1090,7 +1155,7 @@ export default function App() {
             {abaAtiva === 'detalhes' && (
               <button 
                 onClick={voltarDosDetalhes}
-                className="bg-slate-200 dark:bg-white/10 p-2.5 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-white/20 hover:text-slate-900 dark:hover:text-white transition-all shadow-sm"
+                className="bg-[var(--bg-card)] p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-[var(--bg-hover)] hover:text-slate-900 dark:hover:text-white transition-all shadow-sm"
                 title="Voltar"
               >
                 <ArrowLeft size={18} strokeWidth={2.5} />
@@ -1273,19 +1338,32 @@ export default function App() {
                             <div
                               key={n.id}
                               onClick={() => {
-                                const idReal = n.id.split('-').slice(1).join('-');
-                                const tipoOrigem = n.tipo === 'pendente' || n.tipo === 'agendado' ? 'agendamento' : 'emprestimo';
-                                abrirDetalhes(tipoOrigem, { id: idReal, protocolo: n.protocolo });
+                                if (n.tipo === 'chamado_novo' || n.tipo === 'chamado_status') {
+                                  abrirDetalhes('chamado', { protocolo: n.protocolo });
+                                } else {
+                                  const idReal = n.id.split('-').slice(1).join('-');
+                                  const tipoOrigem = n.tipo === 'pendente' || n.tipo === 'agendado' ? 'agendamento' : 'emprestimo';
+                                  abrirDetalhes(tipoOrigem, { id: idReal, protocolo: n.protocolo });
+                                }
                               }}
                               className="p-5 rounded-2xl border border-slate-100 dark:border-white/5 hover:bg-[var(--bg-page)] dark:hover:bg-[var(--bg-card)]/[0.02] bg-[var(--bg-card)] dark:bg-transparent transition-colors flex gap-4 group relative shadow-sm cursor-pointer"
                             >
-                              <div className={`p-3 rounded-xl shrink-0 h-fit shadow-inner border border-transparent ${n.tipo === 'atraso' ? 'bg-[#8D3046]/10 text-[#8D3046] border-[#8D3046]/20' :
-                                n.tipo === 'pendente' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                                  n.tipo === 'agendado' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                                    n.tipo === 'saida' ? 'bg-[#254E70]/10 text-[#254E70] border-[#254E70]/20' :
-                                      'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20'
-                                }`}>
-                                {n.tipo === 'atraso' ? <AlertTriangle size={16} /> : n.tipo === 'pendente' ? <Globe size={16} /> : n.tipo === 'agendado' ? <CalendarDays size={16} /> : n.tipo === 'saida' ? <ArrowUpRight size={16} /> : <CheckCircle2 size={16} />}
+                              <div className={`p-3 rounded-xl shrink-0 h-fit shadow-inner border border-transparent ${
+                                n.tipo === 'atraso'          ? 'bg-[#8D3046]/10 text-[#8D3046] border-[#8D3046]/20' :
+                                n.tipo === 'pendente'        ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                n.tipo === 'agendado'        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                n.tipo === 'saida'           ? 'bg-[#254E70]/10 text-[#254E70] border-[#254E70]/20' :
+                                n.tipo === 'chamado_novo'    ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' :
+                                n.tipo === 'chamado_status'  ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                                                               'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                              }`}>
+                                {n.tipo === 'atraso'         ? <AlertTriangle size={16} /> :
+                                 n.tipo === 'pendente'       ? <Globe size={16} /> :
+                                 n.tipo === 'agendado'       ? <CalendarDays size={16} /> :
+                                 n.tipo === 'saida'          ? <ArrowUpRight size={16} /> :
+                                 n.tipo === 'chamado_novo'   ? <MessageSquare size={16} /> :
+                                 n.tipo === 'chamado_status' ? <Activity size={16} /> :
+                                                               <CheckCircle2 size={16} />}
                               </div>
                               <div className="flex-1">
                                 <div className="flex justify-between items-start mb-1">
@@ -1448,7 +1526,7 @@ export default function App() {
               <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-slate-400 dark:text-[#505050] mb-5">
                 Bem-vindo de volta
               </p>
-              <h1 className="text-6xl md:text-8xl font-light tracking-tight text-slate-900 dark:text-white capitalize">
+              <h1 className="text-5xl md:text-7xl font-light tracking-tight text-slate-900 dark:text-white capitalize">
                 {usuarioAtual.get('nome') || usuarioAtual.get('username')}
               </h1>
               <p className="text-sm text-slate-400 dark:text-[#505050] mt-5">

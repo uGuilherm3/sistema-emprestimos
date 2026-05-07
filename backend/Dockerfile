@@ -12,6 +12,6 @@ COPY . .
 # Cria a pasta de uploads caso não exista
 RUN mkdir -p uploads
 
-EXPOSE 3001
+EXPOSE 3031
 
 CMD ["node", "--env-file=.env", "server.js"]

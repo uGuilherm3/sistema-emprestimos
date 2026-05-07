@@ -25,7 +25,11 @@ export default defineConfig({
       '/api/printers-data': {
         target: 'http://192.168.0.253:8080',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/printers-data/, '/api'), 
+        rewrite: (path) => path.replace(/^\/api\/printers-data/, '/api'),
+      },
+      '/api': {
+        target: 'http://192.168.0.253:3031',
+        changeOrigin: true,
       },
     }
   },

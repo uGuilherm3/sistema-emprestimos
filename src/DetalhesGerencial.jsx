@@ -610,13 +610,25 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
                 {/* SEÇÃO 3: AUDITORIA DE MOVIMENTAÇÃO */}
                 <section className="space-y-6">
                   <div className="grid grid-cols-2 gap-x-4 gap-y-6">
-                    <div className="col-span-2 space-y-2">
+                    <div className={`${tipo === 'chamado' ? 'col-span-1' : 'col-span-2'} space-y-2`}>
                       <label className={titleSidebarStyle}>Abertura do Chamado</label>
                       <div className="bg-[var(--bg-card)] dark:bg-white/5 p-4 rounded-xl min-h-[52px] flex items-center gap-3">
                         <Clock size={12} className="text-slate-400" />
                         <span className="text-[11px] font-black text-slate-900 dark:text-white uppercase truncate">{formatarDataSegura(dataCriacao)}</span>
                       </div>
                     </div>
+
+                    {tipo === 'chamado' && (
+                      <div className="col-span-1 space-y-2">
+                        <label className={titleSidebarStyle}>Término do Chamado</label>
+                        <div className="bg-[var(--bg-card)] dark:bg-white/5 p-4 rounded-xl min-h-[52px] flex items-center gap-3">
+                          <CheckCircle2 size={12} className={dataRetornoReal ? 'text-emerald-500' : 'text-slate-400'} />
+                          <span className="text-[11px] font-black text-slate-900 dark:text-white uppercase truncate">
+                            {dataRetornoReal ? formatarDataSegura(dataRetornoReal) : 'EM ANDAMENTO'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
 
                     {tipo === 'emprestimo' && (
                       <>
@@ -699,7 +711,7 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
                         <div className="space-y-2">
                           <label className={titleSidebarStyle}>Novo Status</label>
                           <select
-                            className="w-full bg-[var(--bg-card)] dark:bg-white/5 p-4 rounded-xl text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-[#254E70]/50"
+                            className={`w-full bg-[var(--bg-card)] dark:bg-white/5 p-4 rounded-xl text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-[#254E70]/50 transition-all ${statusNormalizado === 'Concluído' ? 'appearance-none cursor-default opacity-80' : ''}`}
                             value={statusSelecionado || statusNormalizado || 'Aberto'}
                             onChange={e => setStatusSelecionado(e.target.value)}
                             disabled={statusNormalizado === 'Concluído'}
@@ -716,8 +728,9 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
                           <label className={titleSidebarStyle}>Definir Prioridade</label>
                           <select
                             id="ticket-priority-select"
-                            className="w-full bg-[var(--bg-card)] dark:bg-white/5 p-4 rounded-xl text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-[#254E70]/50"
+                            className={`w-full bg-[var(--bg-card)] dark:bg-white/5 p-4 rounded-xl text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-[#254E70]/50 transition-all ${statusNormalizado === 'Concluído' ? 'appearance-none cursor-default opacity-80' : ''}`}
                             defaultValue={dados.prioridade || 'Normal'}
+                            disabled={statusNormalizado === 'Concluído'}
                           >
                             <option className="bg-[var(--bg-card)] dark:bg-slate-900 text-slate-900 dark:text-white" value="Baixa">Baixa</option>
                             <option className="bg-[var(--bg-card)] dark:bg-slate-900 text-slate-900 dark:text-white" value="Normal">Normal</option>
@@ -868,7 +881,6 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
                       disabled={loadingAction || statusNormalizado === 'Concluído'}
                       onClick={async () => {
                         if (statusNormalizado === 'Concluído') return;
-
                         const prioritySelectValue = document.getElementById('ticket-priority-select')?.value;
                         const novoStatus = statusSelecionado || statusNormalizado;
 
@@ -915,7 +927,13 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
                       }}
                       className={`flex-1 py-4 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-colors ${statusNormalizado === 'Concluído' ? 'bg-slate-300 dark:bg-white/5 opacity-50 cursor-not-allowed text-slate-500' : 'bg-[#254E70] hover:opacity-90'}`}
                     >
-                      {loadingAction ? 'Processando...' : <><CheckCircle2 size={18} /> ATUALIZAR STATUS DO TICKET</>}
+                      {loadingAction ? 'Processando...' : (
+                        statusNormalizado === 'Concluído' ? (
+                          <><ShieldCheck size={18} /> CHAMADO CONCLUÍDO</>
+                        ) : (
+                          <><CheckCircle2 size={18} /> ATUALIZAR STATUS DO TICKET</>
+                        )
+                      )}
                     </button>
                   )}
                 </div>

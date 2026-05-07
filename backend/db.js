@@ -11,11 +11,11 @@
 import mysql from 'mysql2/promise';
 
 const pool = mysql.createPool({
-  host:     process.env.DB_HOST     || '192.168.0.253',
-  port:     Number(process.env.DB_PORT) || 3010,
-  user:     process.env.DB_USER     || 'root',
-  password: process.env.DB_PASS     || '',
-  database: process.env.DB_NAME     || 'dbSistemas',
+  host:     process.env.DB_HOST,
+  port:     Number(process.env.DB_PORT),
+  user:     process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
   charset:  'utf8mb4',
 
   // Pool settings
@@ -47,7 +47,7 @@ const pool = mysql.createPool({
 // Testa a conexão na inicialização e loga resultado
 pool.getConnection()
   .then(conn => {
-    console.log(`✅ [DB] MariaDB conectado → ${process.env.DB_HOST || '192.168.0.253'}:${process.env.DB_PORT || 3010}/${process.env.DB_NAME || 'dbSistemas'}`);
+    console.log(`✅ [DB] MariaDB conectado → ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);
     conn.release();
   })
   .catch(err => {

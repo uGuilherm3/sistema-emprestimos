@@ -6,7 +6,7 @@
 //   Todas as funções retornam { data, error } para manter
 //   compatibilidade com o padrão antigo do Supabase.
 
-const BASE_URL = import.meta.env.VITE_API_URL || '/sistemas';
+const BASE_URL = import.meta.env.VITE_API_URL || '';
 
 const API_KEY = import.meta.env.VITE_API_KEY || '';
 
