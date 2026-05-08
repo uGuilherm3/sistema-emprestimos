@@ -27,7 +27,8 @@ const COMP_DIR     = path.join(UPLOADS_ROOT, 'comprovantes');
 [FOTOS_DIR, COMP_DIR].forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
 
 // ─── Helpers ──────────────────────────────────────────────────
-const BASE_URL = process.env.API_BASE_URL || `http://${process.env.DB_HOST || '192.168.0.253'}:${process.env.PORT || 3001}`;
+const BASE_URL = process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 3031}`;
+const baseName = (url) => path.basename(url.split('?')[0]);
 
 const mkStorage = (dest) => multer.diskStorage({
   destination: (req, file, cb) => cb(null, dest),
@@ -79,7 +80,7 @@ router.post('/foto/:userId', fotoUpload.single('foto'), async (req, res) => {
     const [rows] = await db.query('SELECT foto_perfil FROM users WHERE id = ? LIMIT 1', [userId]);
     const fotoAntiga = rows[0]?.foto_perfil;
     if (fotoAntiga) {
-      const nomeArquivo = path.basename(new URL(fotoAntiga).pathname);
+      const nomeArquivo = baseName(fotoAntiga);
       const caminhoAntigo = path.join(FOTOS_DIR, nomeArquivo);
       if (fs.existsSync(caminhoAntigo)) fs.unlinkSync(caminhoAntigo);
     }
@@ -104,7 +105,7 @@ router.delete('/foto/:userId', async (req, res) => {
     const fotoUrl = rows[0]?.foto_perfil;
 
     if (fotoUrl) {
-      const nomeArquivo = path.basename(new URL(fotoUrl).pathname);
+      const nomeArquivo = baseName(fotoUrl);
       const caminho = path.join(FOTOS_DIR, nomeArquivo);
       if (fs.existsSync(caminho)) fs.unlinkSync(caminho);
       await db.query('UPDATE users SET foto_perfil = NULL, updated_at = NOW() WHERE id = ?', [userId]);
@@ -139,7 +140,7 @@ router.post('/comprovante/:empId', compUpload.single('comprovante'), async (req,
     const urlAntiga = rows[0]?.[campo];
     if (urlAntiga) {
       try {
-        const nomeArquivo = path.basename(new URL(urlAntiga).pathname);
+        const nomeArquivo = baseName(urlAntiga);
         const caminhoAntigo = path.join(COMP_DIR, nomeArquivo);
         if (fs.existsSync(caminhoAntigo)) fs.unlinkSync(caminhoAntigo);
       } catch (_) { /* URL inválida ou arquivo já removido */ }
@@ -168,7 +169,7 @@ router.delete('/comprovante/:empId', async (req, res) => {
     const urlAntiga = rows[0]?.[campo];
     if (urlAntiga) {
       try {
-        const nomeArquivo = path.basename(new URL(urlAntiga).pathname);
+        const nomeArquivo = baseName(urlAntiga);
         const caminho = path.join(COMP_DIR, nomeArquivo);
         if (fs.existsSync(caminho)) fs.unlinkSync(caminho);
       } catch (_) { /* seguro */ }

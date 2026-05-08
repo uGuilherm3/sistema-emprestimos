@@ -126,7 +126,8 @@ export default function PrintersAdmin() {
   const fetchPrinters = async () => {
     setRefreshing(true);
     try {
-      const response = await fetch('/api/printers-data');
+      const base = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${base}/api/printers-data`);
       if (!response.ok) throw new Error('Falha ao buscar dados reais');
       const data = await response.json();
       

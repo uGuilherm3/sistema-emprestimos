@@ -1,7 +1,6 @@
 // src/Login.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from './utils/apiClient';
-import { loginGLPI } from './utils/glpiClient';
 import { ShieldAlert, Sun, Moon } from 'lucide-react';
 import LogoImg from './assets/logo.jpg';
 
@@ -150,6 +149,7 @@ export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
 
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
+  const [transitioning, setTransitioning] = useState(false);
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -171,9 +171,9 @@ export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
   });
 
   const entrarLauncher = (userMock) => {
-    // Salva o ID localmente e entrega o controle pro App.jsx mostrar o launcher real
     localStorage.setItem('tilend_user_id', userMock.id);
-    onLoginSucesso(userMock);
+    setTransitioning(true);
+    setTimeout(() => onLoginSucesso(userMock), 520);
   };
 
   const handleLogin = async (e) => {
@@ -184,24 +184,18 @@ export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
     const userToLogin = username.trim().toLowerCase();
     const pinToLogin = password.trim();
 
+    // Usuário temporário para dev local (sem banco)
+    if (userToLogin === 'dev' && pinToLogin === '0000') {
+      return entrarLauncher(criarUserMock({
+        id: 'dev-local', username: 'dev', nome: 'Dev Local',
+        setor: 'TI', tipo_usuario: 'adm', pin: '0000',
+      }));
+    }
+
     try {
       const { data: user } = await api.users.login(userToLogin, pinToLogin);
       if (user) return entrarLauncher(criarUserMock(user));
 
-      const glpiUser = await loginGLPI(userToLogin, pinToLogin);
-      if (glpiUser) {
-        localStorage.setItem('tilend_glpi_session', glpiUser.sessionToken);
-        const userMock = {
-          ...glpiUser,
-          get: (field) => {
-            if (field === 'tipoUsuario') return 'tecnico';
-            if (field === 'nome') return glpiUser.username;
-            return glpiUser[field];
-          },
-          save: async () => { }
-        };
-        return entrarLauncher(userMock);
-      }
       setErro('Credenciais incorretas. Verifique seu usuário e PIN.');
     } catch (err) {
       setErro('Erro na comunicação com os servidores.');
@@ -210,11 +204,12 @@ export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
     }
   };
 
-  const inputClass = `w-full bg-[var(--bg-soft)] dark:bg-[var(--bg-card)]/5 ring-inset focus:ring-2 text-slate-900 dark:text-white px-4 py-3 rounded-xl outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-[#404040] text-sm`;
-  const labelClass = 'block text-[10px] font-bold uppercase text-slate-500 dark:text-[#A0A0A0] tracking-widest mb-1';
+  const inputClass = `w-full bg-transparent border-b border-slate-500 dark:border-[#808080] focus:border-slate-900 dark:focus:border-white text-slate-900 dark:text-white py-3 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-[#404040] text-sm autofill:shadow-[inset_0_0_0_1000px_var(--bg-page)] autofill:[text-fill-color:black] autofill:[-webkit-text-fill-color:black] dark:autofill:[text-fill-color:white] dark:autofill:[-webkit-text-fill-color:white]`;
+  const labelClass = 'block text-[10px] font-bold uppercase text-slate-500 dark:text-[#808080] tracking-widest mb-1';
   const grad = 'linear-gradient(to bottom right, #254E70, #8D3046)';
 
   return (
+    <>
     <div className="min-h-screen bg-[var(--bg-page)] grid grid-cols-1 lg:grid-cols-2 animate-in fade-in duration-700 font-sans transition-colors duration-300">
 
       {/* ── Painel Esquerdo: Formulário ou Bem-vindo ── */}
@@ -240,7 +235,7 @@ export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
                 </div>
               </div>
               <div className="flex justify-end mt-20">
-                <button type="submit" disabled={loading} className="w-24 h-24 bg-slate-900 text-white dark:bg-white dark:text-black rounded-full font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center hover:scale-105 transition-all shadow-xl">Entrar</button>
+                <button type="submit" disabled={loading} className="w-24 h-24 bg-[#131313] text-white dark:bg-white dark:text-black rounded-full font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center hover:scale-105 transition-all shadow-xl">Entrar</button>
               </div>
             </form>
           </div>
@@ -248,13 +243,36 @@ export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
 
       {/* Painel direito: fundo decorativo gradiente */}
       <div className="hidden lg:flex h-full" style={{ background: grad }}>
-        <div className="w-full h-full relative flex items-center justify-center">
+        <div className="w-full h-full relative flex flex-col items-center justify-center p-12 text-center">
           <button onClick={() => setIsDarkMode(!isDarkMode)} className="absolute top-10 right-10 text-white/70 hover:text-white transition-colors">
             {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
+
+          <div className="animate-in fade-in slide-in-from-right-12 duration-1000">
+            <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-white/40 mb-5">
+              Bem-vindo ao Portal
+            </p>
+            <h2 className="text-5xl md:text-7xl font-light tracking-tight text-white leading-tight">
+              Sistemas <br /> OAB Ceará
+            </h2>
+            <p className="text-sm text-white/40 mt-5">
+              Faça o login para visualizar as ferramentas
+            </p>
+          </div>
         </div>
       </div>
 
     </div>
+
+    {transitioning && (
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'var(--bg-page)',
+        zIndex: 9999,
+        animation: 'expandFromLeft 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards',
+      }} />
+    )}
+    </>
   );
 }

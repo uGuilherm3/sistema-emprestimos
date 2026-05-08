@@ -170,6 +170,45 @@ app.post('/api/email/limpar', authMiddleware, async (req, res) => {
   }
 });
 
+// ─── Proxy: Monitor de Impressoras ───────────────────────────
+app.get('/api/printers-data', async (req, res) => {
+  const url = process.env.PRINTERS_URL || 'http://192.168.0.253:8080/api';
+  try {
+    const upstream = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (!upstream.ok) return res.status(upstream.status).json({ error: 'Monitor indisponível' });
+    const data = await upstream.json();
+    res.json(data);
+  } catch (err) {
+    console.error('[PRINTERS] Erro ao buscar monitor:', err.message);
+    res.status(503).json({ error: 'Monitor de impressoras inacessível' });
+  }
+});
+
+// ─── Proxy: Serviço de Chamados ──────────────────────────────
+app.use('/api/chamados', async (req, res) => {
+  const baseUrl = process.env.CHAMADOS_URL || 'http://192.168.0.253:3002/api';
+  const target = `${baseUrl}/chamados${req.url === '/' ? '' : req.url}`;
+  try {
+    const upstream = await fetch(target, {
+      method: req.method,
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(8000),
+      ...(req.method !== 'GET' && req.method !== 'HEAD' ? { body: JSON.stringify(req.body) } : {}),
+    });
+    const ct = upstream.headers.get('content-type') || '';
+    if (ct.includes('application/json')) {
+      const data = await upstream.json();
+      res.status(upstream.status).json(data);
+    } else {
+      const text = await upstream.text();
+      res.status(upstream.status).send(text);
+    }
+  } catch (err) {
+    console.error('[CHAMADOS] Erro ao proxiar:', err.message);
+    res.status(503).json({ error: 'Serviço de chamados inacessível' });
+  }
+});
+
 // ─── Motor de Lembretes ──────────────────────────────────────
 // Verifica a cada minuto se há eventos com lembrete ativo
 // que iniciam em 30-31 minutos a partir de agora.

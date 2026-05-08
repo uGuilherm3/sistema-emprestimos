@@ -22,6 +22,21 @@ export default defineConfig({
   server: {
     host: true,
     proxy: {
+      '/sistemas/api/printers-data': {
+        target: 'http://192.168.0.253:8080',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/sistemas\/api\/printers-data/, '/api'),
+      },
+      '/sistemas/api': {
+        target: 'http://192.168.0.253:3031',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/sistemas/, ''),
+      },
+      '/sistemas/uploads': {
+        target: 'http://192.168.0.253:3031',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/sistemas/, ''),
+      },
       '/api/printers-data': {
         target: 'http://192.168.0.253:8080',
         changeOrigin: true,

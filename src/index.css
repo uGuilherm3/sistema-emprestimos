@@ -14,6 +14,17 @@
   --color-card: var(--bg-card);
 }
 
+/* ── Animações de transição login → launcher ── */
+@keyframes expandFromLeft {
+  from { clip-path: inset(0 50% 0 0); }
+  to   { clip-path: inset(0 0% 0 0); }
+}
+
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* 🎨 Estilos Globais Fundamentais */
 html, body {
   margin: 0;

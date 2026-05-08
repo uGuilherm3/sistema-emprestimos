@@ -71,8 +71,8 @@ const tipoParaRole = (tipo) => {
 };
 
 const PERMISSIONS = {
-  default:    new Set(['agenda', 'portal', 'perfil']),
-  solicitante: new Set(['agenda', 'portal', 'perfil']),
+  default:    new Set(['agenda', 'portal', 'perfil', 'chamados_externos']),
+  solicitante: new Set(['agenda', 'portal', 'perfil', 'chamados_externos']),
   tecnico:    new Set(['agenda', 'estoque', 'saidas', 'entradas', 'calendario', 'chamados_externos', 'impressoras', 'bot_conhecimento', 'relatorios', 'portal', 'detalhes', 'perfil', 'manutencoes']),
 };
 
@@ -100,6 +100,200 @@ const rotasGlobais = [
   { id: 'dashboard#historico-dashboard', nome: 'Histórico de Transações (Dashboard)', icon: ListChecks, keywords: ['historico', 'transacoes', 'auditoria', 'quem pegou', 'quem devolveu', 'entradas e saídas', 'timeline', 'lista de emprestimos'] }
 ];
 
+// ── Mini gráfico de anel (SVG) ────────────────────────────────
+const MiniRing = ({ pct = 65, label, color = '#254E70' }) => {
+  const r = 22, c = 2 * Math.PI * r;
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-1.5">
+      <svg width="56" height="56" viewBox="0 0 56 56">
+        <circle cx="28" cy="28" r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="5"/>
+        <circle cx="28" cy="28" r={r} fill="none" stroke={color} strokeWidth="5"
+          strokeDasharray={`${(pct/100)*c} ${c}`} strokeLinecap="round"
+          transform="rotate(-90 28 28)" style={{transition:'stroke-dasharray 0.9s ease'}}/>
+        <text x="28" y="33" textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize="10" fontWeight="600">{pct}%</text>
+      </svg>
+      <span className="text-[8px] text-slate-500 dark:text-[#505050] uppercase tracking-widest">{label}</span>
+    </div>
+  );
+};
+
+// ── Mini gráfico de barras horizontais ────────────────────────
+const MiniBars = ({ bars = [], label }) => (
+  <div className="flex flex-col justify-center h-full gap-2 px-3 py-2">
+    {bars.map((b, i) => (
+      <div key={i} className="flex items-center gap-2">
+        <span className="text-[8px] text-slate-400 dark:text-[#606060] w-14 shrink-0 truncate">{b.label}</span>
+        <div className="flex-1 h-[3px] bg-white/5 rounded-full overflow-hidden">
+          <div className="h-full rounded-full" style={{width:`${b.pct}%`, background:b.color||'#254E70', transition:'width 0.9s ease'}}/>
+        </div>
+      </div>
+    ))}
+    {label && <span className="text-[8px] text-slate-500 dark:text-[#505050] text-center mt-1">{label}</span>}
+  </div>
+);
+
+// ── Cards de preview por módulo ───────────────────────────────
+const PREVIEW_CARD_BASE = 'bg-white/[0.03] rounded-2xl h-full overflow-hidden';
+
+  const G = 14; // gap px aumentado
+  const H = 560; // altura total aumentada
+
+const LgCard = ({ titulo, desc }) => (
+  <div className={`${PREVIEW_CARD_BASE} flex flex-col justify-end p-12`}>
+    <p className="text-[14px] font-bold uppercase tracking-widest text-slate-500 dark:text-[#505050] mb-4">Dashboard</p>
+    <h3 className="text-4xl font-light text-white mb-6 leading-snug">{titulo}</h3>
+    <p className="text-base text-slate-400 dark:text-[#606060] leading-relaxed max-w-xl">{desc}</p>
+  </div>
+);
+
+const MdCard = ({ children }) => <div className={PREVIEW_CARD_BASE}>{children}</div>;
+
+const SmCard = ({ label, val }) => (
+  <div className={`${PREVIEW_CARD_BASE} flex flex-col items-center justify-center p-8`}>
+    <span className="text-6xl font-light text-white leading-none">{val}</span>
+    <span className="text-[14px] text-slate-500 dark:text-[#505050] uppercase tracking-wider mt-5 text-center leading-tight">{label}</span>
+  </div>
+);
+
+const ModuloPreviewCards = ({ moduleId, itens = [], notificacoes = [] }) => {
+  const total = itens.length;
+  const disp  = itens.filter(i => (i.quantidade_disponivel || 0) > 0).length;
+  const atraso = notificacoes.filter(n => n.tipo === 'atraso').length;
+  const dispPct = Math.round(disp / Math.max(1, total) * 100);
+
+  const cfg = {
+    dashboard: {
+      layout: 'A',
+      large: { titulo: 'Dashboard Geral', desc: 'Métricas executivas de empréstimos, devoluções, agenda e auditoria em tempo real.' },
+      medium: <MiniRing pct={dispPct} label="Disponibilidade" color="#10b981"/>,
+      s1: { label: 'Itens Cadastrados', val: total },
+      s2: { label: 'Em Atraso', val: atraso || '0' },
+    },
+    agenda: {
+      layout: 'B',
+      large: { titulo: 'Minha Agenda', desc: 'Organize compromissos, tarefas e lembretes com visualização estilo Google Calendar.' },
+      medium: (
+        <div className="flex flex-col items-center justify-center h-full p-8">
+          <span className="text-6xl font-light text-white leading-none">12</span>
+          <span className="text-[14px] text-slate-500 dark:text-[#505050] uppercase tracking-wider mt-5 text-center leading-tight">Eventos na Semana</span>
+        </div>
+      ),
+      s1: { label: 'Hoje', val: new Date().toLocaleDateString('pt-BR',{weekday:'short'}).replace('.','').toUpperCase() },
+      s2: { label: 'Mês', val: new Date().toLocaleDateString('pt-BR',{month:'short'}).replace('.','').toUpperCase() },
+    },
+    estoque: {
+      layout: 'C',
+      large: { titulo: 'Gestão de Empréstimos', desc: 'Registre saídas e devoluções, controle estoque e monitore empréstimos em aberto.' },
+      medium: <MiniBars label="Distribuição do estoque" bars={[
+        { label:'Disponível', pct: dispPct, color:'#10b981' },
+        { label:'Em uso', pct: 100 - dispPct, color:'#f59e0b' },
+        { label:'Em atraso', pct: Math.min(100, atraso * 12), color:'#ef4444' },
+      ]}/>,
+      s1: { label: 'Total Itens', val: total },
+      s2: { label: 'Disponíveis', val: disp },
+    },
+    chamados_externos: {
+      layout: 'D',
+      large: { titulo: 'Painel de Chamados', desc: 'Central integrada de suporte TI — abra, acompanhe e resolva chamados por protocolo.' },
+      medium: <MiniRing pct={65} label="Resolvidos" color="#3b82f6"/>,
+      s1: { label: 'Novos', val: notificacoes.filter(n=>n.tipo==='chamado_novo').length || '—' },
+      s2: { label: 'Atualizados', val: notificacoes.filter(n=>n.tipo==='chamado_status').length || '—' },
+    },
+    impressoras: {
+      layout: 'A',
+      large: { titulo: 'Gestão de Ativos', desc: 'Monitor de impressoras em tempo real — status online/offline, toner e histórico de impressões.' },
+      medium: <MiniBars label="Nível de toner" bars={[
+        { label:'Crítico', pct:15, color:'#ef4444' },
+        { label:'Normal', pct:62, color:'#f59e0b' },
+        { label:'Cheio', pct:88, color:'#10b981' },
+      ]}/>,
+      s1: { label: 'Monitoradas', val: '16' },
+      s2: { label: 'Online', val: '14' },
+    },
+    manutencoes: {
+      layout: 'B',
+      large: { titulo: 'Manutenções', desc: 'Registre ordens de serviço preventivas e corretivas com histórico completo de intervenções.' },
+      medium: <MiniRing pct={42} label="Em andamento" color="#f59e0b"/>,
+      s1: { label: 'Abertas', val: '—' },
+      s2: { label: 'Concluídas', val: '—' },
+    },
+    relatorios: {
+      layout: 'C',
+      large: { titulo: 'Inteligência e Relatórios', desc: 'Exporte dados em CSV/Excel com filtros avançados de período, categoria e tipo.' },
+      medium: <MiniBars label="Categorias exportadas" bars={[
+        { label:'Empréstimos', pct:80, color:'#254E70' },
+        { label:'Devoluções', pct:55, color:'#8D3046' },
+        { label:'Auditoria', pct:35, color:'#64748b' },
+      ]}/>,
+      s1: { label: 'Total Itens', val: total },
+      s2: { label: 'Alertas', val: notificacoes.length },
+    },
+    portal: {
+      layout: 'D',
+      large: { titulo: 'Portal do Solicitante', desc: 'Espaço público para colaboradores solicitarem empréstimos de equipamentos com aprovação em tempo real.' },
+      medium: <MiniRing pct={dispPct} label="Disponível" color="#10b981"/>,
+      s1: { label: 'Disponíveis', val: disp },
+      s2: { label: 'Categorias', val: [...new Set(itens.map(i=>i.categoria).filter(Boolean))].length || '—' },
+    },
+  }[moduleId];
+
+  if (!cfg) return null;
+
+  const G = 12;
+  const H = '64vh'; // Altura aumentada para preencher mais espaço
+  const Sq = `calc((${H} - ${G}px) / 2)`;
+  const ColW = `calc(${Sq} * 2 + ${G}px)`;
+
+  const layouts = {
+    // Large esquerda (flex), medium + smalls direita (fixo baseado em Sq)
+    A: (
+      <div style={{display:'grid', gridTemplateColumns:`1fr ${ColW}`, gridTemplateRows:'1fr 1fr', gap:G, height:H}}>
+        <div style={{gridRow:'1/3'}}><LgCard {...cfg.large}/></div>
+        <MdCard>{cfg.medium}</MdCard>
+        <div style={{display:'grid', gridTemplateColumns:`${Sq} ${Sq}`, gap:G}}>
+          <SmCard {...cfg.s1}/><SmCard {...cfg.s2}/>
+        </div>
+      </div>
+    ),
+    // Large topo (100%), medium + smalls embaixo (3 quadrados)
+    B: (
+      <div className="mx-auto" style={{maxWidth: `calc(${Sq} * 3 + ${G}px * 2)`}}>
+        <div style={{display:'grid', gridTemplateRows:'1.3fr 1fr', gap:G, height:H}}>
+          <LgCard {...cfg.large}/>
+          <div style={{display:'grid', gridTemplateColumns:`${Sq} ${Sq} ${Sq}`, gap:G}}>
+            <MdCard>{cfg.medium}</MdCard>
+            <SmCard {...cfg.s1}/><SmCard {...cfg.s2}/>
+          </div>
+        </div>
+      </div>
+    ),
+    // Medium + smalls esquerda, Large direita
+    C: (
+      <div style={{display:'grid', gridTemplateColumns:`${ColW} 1fr`, gridTemplateRows:'1fr 1fr', gap:G, height:H}}>
+        <MdCard>{cfg.medium}</MdCard>
+        <div style={{gridColumn:'2', gridRow:'1/3'}}><LgCard {...cfg.large}/></div>
+        <div style={{display:'grid', gridTemplateColumns:`${Sq} ${Sq}`, gap:G}}>
+          <SmCard {...cfg.s1}/><SmCard {...cfg.s2}/>
+        </div>
+      </div>
+    ),
+    // Medium esquerda alta, smalls centro-topo, Large direita baixo
+    D: (
+      <div style={{display:'grid', gridTemplateColumns:`${Sq} ${Sq} 1fr`, gridTemplateRows:'1fr 1fr', gap:G, height:H}}>
+        <div style={{gridRow:'1/3'}}><MdCard>{cfg.medium}</MdCard></div>
+        <SmCard {...cfg.s1}/><SmCard {...cfg.s2}/>
+        <div style={{gridColumn:'2/4'}}><LgCard {...cfg.large}/></div>
+      </div>
+    ),
+  };
+
+  return (
+    <div key={moduleId} className="w-full max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-3 duration-300">
+      {layouts[cfg.layout]}
+    </div>
+  );
+};
+
 export default function App() {
   // usuarioAtual: objeto do usuário logado (null = ninguém logado)
   const [usuarioAtual, setUsuarioAtual] = useState(null);
@@ -111,8 +305,8 @@ export default function App() {
   // showLauncher: true logo após o login — exibe a tela de seleção de módulo
   // antes de entrar no sistema. Volta a false quando o usuário escolhe um módulo.
   const [showLauncher, setShowLauncher] = useState(false);
-  // animandoLauncher: controla a animação de saída da barra de módulos
   const [animandoLauncher, setAnimandoLauncher] = useState(false);
+  const [moduloPreview, setModuloPreview] = useState(null);
 
   const [abaPortal, setAbaPortal] = useState('catalogo');
   const location = useLocation();
@@ -288,7 +482,12 @@ export default function App() {
   }
 
   const exchangeCodeForToken = async (code) => {
-    const codeVerifier = sessionStorage.getItem('spotify_code_verifier');
+    const codeVerifier = localStorage.getItem('spotify_code_verifier');
+    if (!codeVerifier) {
+      console.error('[Spotify] code_verifier não encontrado — tente conectar novamente');
+      return;
+    }
+    localStorage.removeItem('spotify_code_verifier');
     try {
       const response = await fetch('https://accounts.spotify.com/api/token', {
         method: 'POST',
@@ -308,9 +507,11 @@ export default function App() {
         if (data.refresh_token) {
           localStorage.setItem('spotify_refresh_token', data.refresh_token);
         }
+      } else {
+        console.error('[Spotify] Falha na troca de token:', data);
       }
     } catch (err) {
-      console.error('Erro de troca de código:', err);
+      console.error('[Spotify] Erro de troca de código:', err);
     }
   };
 
@@ -467,7 +668,7 @@ export default function App() {
     }
 
     const codeVerifier = generateRandomString(64);
-    sessionStorage.setItem('spotify_code_verifier', codeVerifier);
+    localStorage.setItem('spotify_code_verifier', codeVerifier);
 
     const hashed = await sha256(codeVerifier);
     const codeChallenge = base64urlencode(hashed);
@@ -558,7 +759,7 @@ export default function App() {
 
     const heartbeat = async () => {
       try {
-        await api.users.update(usuarioAtual.id, { updated_at: new Date().toISOString() });
+        await api.users.update(usuarioAtual.id, { updated_at: new Date().toISOString().slice(0, 19).replace('T', ' ') });
       } catch (e) {
         console.error("Erro no heartbeat:", e);
       }
@@ -572,7 +773,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [usuarioAtual?.id]);
 
-  // MOTOR CENTRAL DE NOTIFICAÇÕES (Híbrido: Supabase Legado + GLPI Oficial)
+  // MOTOR CENTRAL DE NOTIFICAÇÕES (MariaDB + GLPI)
   useEffect(() => {
     if (usuarioAtual && usuarioAtual.get('tipoUsuario') !== 'solicitante') {
       const fetchData = async () => {
@@ -580,7 +781,6 @@ export default function App() {
           const umDiaAtras = new Date(); umDiaAtras.setDate(umDiaAtras.getDate() - 1);
           const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
 
-          // 1. DADOS DO SUPABASE (Fonte de Verdade)
           const queries = [
             api.items.list(),
             api.emprestimos.list({ status: 'Aberto', limit: 200 }),
@@ -591,25 +791,23 @@ export default function App() {
 
           let results = await Promise.all(queries);
 
-          // Fallback para lembretes caso a coluna participantes não exista
           if (results[4].error) {
-            console.warn("Erro lembretes participantes, tentando fallback...");
             results[4] = await api.agenda.list({ tecnico: usuarioAtual.get('username'), lembrete: 'true', gte_inicio: new Date().toISOString() });
           }
 
-          const [resItens, resAbertosSupa, resRetornosSupa, resAgendamentosSupa, resLembretesSupa] = results;
+          const [resItens, resAbertos, resRetornos, , resLembretes] = results;
 
-          // 2. NOVOS DADOS DO GLPI (Motor Oficial)
+          // GLPI (tickets de empréstimo)
           const { fetchGLPITickets } = await import('./utils/glpiClient');
           const [ticketsAbertosGLPI, ticketsFechadosGLPI] = await Promise.all([
-            fetchGLPITickets({ status: '1,2,3,4' }), // Não resolvidos
-            fetchGLPITickets({ status: '5,6' })      // Solucionados/Fechados
+            fetchGLPITickets({ status: '1,2,3,4' }),
+            fetchGLPITickets({ status: '5,6' })
           ]);
 
-          // 3. PROCESSAR DISPONIBILIDADE REAL (Estoque Supabase - Empréstimos Ativos)
+          // Disponibilidade real (empréstimos ativos vs estoque)
           if (resItens.data) {
             const itensBase = resItens.data;
-            const emprestimosAtivos = resAbertosSupa.data || [];
+            const emprestimosAtivos = resAbertos.data || [];
 
             // Mapear quantidades emprestadas por item_id ou glpi_item_id
             const emUsoPorItemId = {};
@@ -640,33 +838,34 @@ export default function App() {
 
           const arrayNotificacoesBrutas = [];
 
-          // Processar Supabase Legado (Abertos, Retornos, Agendamentos)
-          if (resAbertosSupa.data) {
-            resAbertosSupa.data.forEach(emp => {
+          // Empréstimos abertos (MariaDB)
+          if (resAbertos.data) {
+            resAbertos.data.forEach(emp => {
+              if (!emp.item) return;
               const createdAt = new Date(emp.created_at);
               const isAtraso = createdAt < umDiaAtras;
               arrayNotificacoesBrutas.push({
-                id: `${isAtraso ? 'atraso' : 'saida'}-supa-${emp.id}`,
+                id: `${isAtraso ? 'atraso' : 'saida'}-${emp.id}`,
                 tipo: isAtraso ? 'atraso' : 'saida',
                 protocolo: emp.protocolo,
-                item: emp.item?.nome_equipamento || 'Equipamento',
-                solicitante: emp.nome_solicitante || 'LEGADO',
+                item: emp.item.nome_equipamento,
+                solicitante: emp.nome_solicitante,
                 data: isAtraso ? new Date(createdAt.getTime() + (24 * 60 * 60 * 1000)) : createdAt
               });
             });
           }
-          if (resRetornosSupa.data) {
-            resRetornosSupa.data.forEach(emp => {
+          if (resRetornos.data) {
+            resRetornos.data.forEach(emp => {
               const dataRetorno = emp.data_hora_retorno ? new Date(emp.data_hora_retorno) : new Date(emp.updated_at);
-              arrayNotificacoesBrutas.push({ id: `retorno-supa-${emp.id}`, tipo: 'retorno', protocolo: emp.protocolo, item: emp.item?.nome_equipamento || 'Equipamento', solicitante: emp.nome_solicitante || 'LEGADO', data: dataRetorno });
+              arrayNotificacoesBrutas.push({ id: `retorno-${emp.id}`, tipo: 'retorno', protocolo: emp.protocolo, item: emp.item?.nome_equipamento || 'Equipamento', solicitante: emp.nome_solicitante, data: dataRetorno });
             });
           }
 
-          // Processar Lembretes de Tarefa (30 minutos antes)
-          if (resLembretesSupa.data) {
+          // Lembretes de tarefa (30 minutos antes)
+          if (resLembretes.data) {
             const trintaMinutosEmMs = 30 * 60 * 1000;
             const agora = new Date();
-            resLembretesSupa.data.forEach(ev => {
+            resLembretes.data.forEach(ev => {
               const inicio = new Date(ev.inicio);
               const diff = inicio.getTime() - agora.getTime();
 
@@ -828,6 +1027,7 @@ export default function App() {
   // Chamado quando o usuário clica num módulo no launcher.
   // Toca a animação de saída, depois navega para o módulo escolhido.
   const abrirModuloLauncher = (rota) => {
+    setModuloPreview(null);
     setAnimandoLauncher(true);
     setTimeout(() => {
       setShowLauncher(false);
@@ -984,7 +1184,7 @@ export default function App() {
   const permSet = PERMISSIONS[tipoUsuario] ?? null;
   const canAccess = (rota) => permSet === null || permSet.has(rota);
 
-  const currentRoute = location.pathname.replace(/^\//, '').split('/')[0] || 'dashboard';
+  const currentRoute = abaAtiva;
   if (permSet && !permSet.has(currentRoute) && currentRoute !== 'detalhes') {
     return <Navigate to={FIRST_ALLOWED_ROUTE[tipoUsuario] || '/agenda'} replace />;
   }
@@ -1510,56 +1710,72 @@ export default function App() {
         {showLauncher ? (
           /* ── LAUNCHER: conteúdo da tela de seleção de módulo ─────────────────
              O header real do sistema já está renderizado acima, incluindo
-             notificações, dark mode, Spotify e foto de perfil.
-             Aqui mostramos só as boas-vindas e a barra horizontal de módulos. */
-          <div className="flex-1 flex flex-col animate-in fade-in duration-500">
+             notificações, dark mode, Spotify e foto de perfil. */
+          <div className={`flex-1 flex flex-col items-center justify-start pb-[10vh] relative overflow-y-auto custom-scrollbar animate-in fade-in duration-700 transition-all duration-500 ${moduloPreview ? 'pt-[3vh]' : 'pt-[12vh]'}`}>
+            <div className="flex flex-col items-center justify-center w-full max-w-5xl px-6 mb-12 text-center transition-all duration-500">
+              <div className={`flex flex-col items-center transition-all duration-500 ${moduloPreview ? 'mb-2 origin-top' : 'mb-8'}`}>
+                <span className={`font-black text-slate-500 dark:text-[#505050] uppercase tracking-[0.4em] transition-all duration-500 ${moduloPreview ? 'text-[8px] mb-2' : 'text-[10px] mb-4'}`}>
+                  Bem-vindo de volta
+                </span>
+                <h1 className={`font-light tracking-tight text-slate-900 dark:text-white capitalize transition-all duration-500 ${moduloPreview ? 'text-3xl md:text-4xl' : 'text-5xl md:text-7xl'}`}>
+                  {usuarioAtual.get('nome') || usuarioAtual.get('username')}
+                </h1>
+                {!moduloPreview && (
+                  <p className="text-sm text-slate-400 dark:text-[#505050] mt-5 transition-all duration-300">
+                    Selecione um módulo abaixo para continuar
+                  </p>
+                )}
+              </div>
 
-            {/* Boas-vindas centralizadas */}
-            <div
-              className="flex-1 flex flex-col items-center justify-center select-none"
-              style={{
-                opacity: animandoLauncher ? 0 : 1,
-                transform: animandoLauncher ? 'translateY(-28px)' : 'translateY(0)',
-                transition: 'opacity 450ms ease, transform 450ms ease',
-              }}
-            >
-              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-slate-400 dark:text-[#505050] mb-5">
-                Bem-vindo de volta
-              </p>
-              <h1 className="text-5xl md:text-7xl font-light tracking-tight text-slate-900 dark:text-white capitalize">
-                {usuarioAtual.get('nome') || usuarioAtual.get('username')}
-              </h1>
-              <p className="text-sm text-slate-400 dark:text-[#505050] mt-5">
-                Selecione um módulo abaixo para continuar
-              </p>
+              {/* Cards de preview — expande abaixo do nome */}
+              <div style={{
+                display: 'grid',
+                gridTemplateRows: moduloPreview ? '1fr' : '0fr',
+                transition: 'grid-template-rows 420ms cubic-bezier(0.4,0,0.2,1)',
+                width: '100%',
+                maxWidth: '1280px',
+                marginTop: moduloPreview ? '1.5rem' : '0',
+              }}>
+                <div style={{ overflow: 'visible' }}>
+                  <ModuloPreviewCards moduleId={moduloPreview} itens={itens} notificacoes={notificacoes} />
+                </div>
+              </div>
             </div>
 
-            {/* Sidebar na horizontal — os mesmos botões do sidebar vertical,
-                deitados no rodapé. Ao clicar, "voam" para a esquerda (animação de saída). */}
-            <div className="flex justify-center pb-12 shrink-0">
+            {/* Ícones dos módulos — fixos na parte inferior */}
+            <div className="fixed bottom-[2vw] left-1/2 -translate-x-1/2 z-[100] transition-all duration-500">
               <div
                 style={{
                   opacity: animandoLauncher ? 0 : 1,
                   transform: animandoLauncher ? 'translateX(-55vw) scale(0.82)' : 'translateX(0) scale(1)',
                   transition: 'opacity 620ms cubic-bezier(0.4, 0, 0.2, 1), transform 620ms cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
-                className="flex flex-row items-center gap-2 px-2"
+                className="flex flex-row items-center gap-4 px-2"
               >
                 {LAUNCHER_MODULOS
                   .filter(m => m.roles.includes(tipoParaRole(usuarioAtual.get('tipoUsuario'))))
-                  .map((modulo) => {
+                  .map((modulo, index) => {
                     const Icon = modulo.icon;
+                    const isSelected = moduloPreview === modulo.id;
                     return (
                       <button
                         key={modulo.id}
-                        onClick={() => abrirModuloLauncher(modulo.rota)}
+                        onClick={() => {
+                          if (isSelected) abrirModuloLauncher(modulo.rota);
+                          else setModuloPreview(modulo.id);
+                        }}
                         disabled={animandoLauncher}
-                        className="group relative flex items-center justify-center w-14 h-14 transition-all duration-200 cursor-pointer text-slate-500 dark:text-[#606060] hover:text-[#254E70] dark:hover:text-white"
+                        style={{
+                          animationName: 'slideUpFade',
+                          animationDuration: '0.22s',
+                          animationTimingFunction: 'ease',
+                          animationDelay: `${index * 55}ms`,
+                          animationFillMode: 'both',
+                        }}
+                        className={`group relative flex items-center justify-center w-[62px] h-[62px] transition-all duration-200 cursor-pointer ${isSelected ? 'text-[#254E70] dark:text-white scale-110' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70] dark:hover:text-white'}`}
                       >
-                        {/* Indicador azul no rodapé do botão ao hover */}
-                        <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 h-[5px] w-0 group-hover:w-6 rounded-t-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 opacity-0 group-hover:opacity-100" />
-                        <Icon size={18} className="shrink-0 transition-transform group-hover:scale-110" />
-                        {/* Tooltip balão acima do botão */}
+                        <div className={`absolute bottom-[-4px] left-1/2 -translate-x-1/2 h-[5px] rounded-t-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 ${isSelected ? 'w-6 opacity-100' : 'w-0 opacity-0 group-hover:w-6 group-hover:opacity-100'}`} />
+                        <Icon size={22} className="shrink-0 transition-transform group-hover:scale-110" />
                         <div className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 px-[14px] py-[8px] bg-[#0f172a] dark:bg-white text-white dark:text-[#0f172a] text-[12px] font-medium rounded-full whitespace-nowrap pointer-events-none transition-all duration-300 opacity-0 translate-y-2 group-hover:translate-y-0 group-hover:opacity-100 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3)] dark:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.5)] border border-white/10 dark:border-black/10 z-[1000000]">
                           {modulo.nome}
                         </div>

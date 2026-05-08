@@ -5,7 +5,7 @@ import {
   Clock, User, MessageSquare
 } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_CHAMADOS_API_BASE || "http://localhost:3000/api";
+const API_BASE = import.meta.env.VITE_CHAMADOS_API_BASE || "/api";
 
 export default function ChamadosAdmin({ onOpenDetails }) {
   const [chamados, setChamados] = useState([]);

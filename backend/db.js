@@ -10,6 +10,11 @@
 
 import mysql from 'mysql2/promise';
 
+const isoRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+const toMySQL = params => params.map(p =>
+  typeof p === 'string' && isoRegex.test(p) ? p.slice(0, 19).replace('T', ' ') : p
+);
+
 const pool = mysql.createPool({
   host:     process.env.DB_HOST,
   port:     Number(process.env.DB_PORT),
@@ -64,14 +69,14 @@ export const db = {
    * @returns {Promise<[rows, fields]>}
    */
   async query(sql, params = []) {
-    return pool.execute(sql, params);
+    return pool.execute(sql, toMySQL(params));
   },
 
   /**
    * Alias de query — interface consistente com mysql2.
    */
   async execute(sql, params = []) {
-    return pool.execute(sql, params);
+    return pool.execute(sql, toMySQL(params));
   },
 
   /**

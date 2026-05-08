@@ -3,6 +3,5 @@ dist
 .git
 .github
 .agents
-.env
 README.md
 *.log
