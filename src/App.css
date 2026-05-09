@@ -17,9 +17,11 @@
 }
 
 /* Modo Escuro (Sobrescrita de Variáveis) */
-.dark, [data-theme='dark'] {
+.dark,
+[data-theme='dark'] {
   --bg-page: #131313;
-  --bg-card: #181818; /* Cor unificada conforme solicitado */
+  --bg-card: #181818;
+  /* Cor unificada conforme solicitado */
   --text-main: #d8d8d8;
   --text-muted: #868686;
   --bg-soft: rgba(255, 255, 255, 0.021);
@@ -265,6 +267,7 @@ body {
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -314,8 +317,13 @@ body {
 }
 
 @keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .animate-spin-slow {
@@ -332,15 +340,21 @@ body {
 }
 
 @keyframes border-beam {
-  0% { transform: translate(-50%, -50%) rotate(0deg); }
-  100% { transform: translate(-50%, -50%) rotate(360deg); }
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
 }
 
 /* Estilo para o Botão + (Borda Circular) */
 .input-gradient-wrapper {
   position: relative;
   border-radius: 1.25rem;
-  padding: 3.5px; /* Aumentado em 1px */
+  padding: 3.5px;
+  /* Aumentado em 1px */
   background: transparent;
   overflow: hidden;
   display: flex;
@@ -355,13 +369,11 @@ body {
   left: 50%;
   width: 1000%;
   height: 1000%;
-  background: conic-gradient(
-    from 0deg,
-    transparent 165deg,
-    #254E70 180deg, 
-    #8D3046 195deg, 
-    transparent 205deg
-  );
+  background: conic-gradient(from 0deg,
+      transparent 165deg,
+      #254E70 180deg,
+      #8D3046 195deg,
+      transparent 205deg);
   animation: border-beam 5s linear infinite;
   opacity: 0.5;
 }
@@ -383,13 +395,13 @@ body {
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 3px; /* Aumentado em 1px */
-  background: linear-gradient(90deg, 
-    transparent, 
-    #254E70, 
-    #8D3046, 
-    transparent
-  );
+  height: 3px;
+  /* Aumentado em 1px */
+  background: linear-gradient(90deg,
+      transparent,
+      #254E70,
+      #8D3046,
+      transparent);
   background-size: 200% 100%;
   animation: underline-flow 3s linear infinite;
   opacity: 0.4;
@@ -398,12 +410,18 @@ body {
 
 .input-underline-wrapper:focus-within::after {
   opacity: 1;
-  height: 4px; /* Aumentado em 1px */
+  height: 4px;
+  /* Aumentado em 1px */
 }
 
 @keyframes underline-flow {
-  0% { background-position: 100% 0%; }
-  100% { background-position: -100% 0%; }
+  0% {
+    background-position: 100% 0%;
+  }
+
+  100% {
+    background-position: -100% 0%;
+  }
 }
 
 .input-inner-container {
@@ -414,12 +432,13 @@ body {
   display: flex;
   align-items: center;
   z-index: 1;
-  border-radius: 1.25rem; 
+  border-radius: 1.25rem;
 }
 
 .btn-square-rounded {
   height: 100%;
-  width: 54px; /* Largura reduzida conforme solicitado */
+  width: 54px;
+  /* Largura reduzida conforme solicitado */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -429,12 +448,33 @@ body {
   cursor: pointer;
 }
 
+/* Fix definitivo para Autofill e Tamanho de Fonte */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--text-main) !important;
+  transition: background-color 5000s ease-in-out 0s;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 16px !important;
+}
+
+/* Força o fundo do autofill a bater com o bg da página em cada modo */
+.dark input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0px 1000px #131313 inset !important;
+}
+
+input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0px 1000px #f8fafc inset !important;
+}
+
 /* Remover setas padrão de inputs numéricos */
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+
 /* Sidebar Tooltip Pill */
 .sidebar-pill {
   position: absolute;
@@ -466,13 +506,10 @@ input::-webkit-inner-spin-button {
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
 }
 
-.group:hover > .sidebar-pill {
+.group:hover>.sidebar-pill {
   opacity: 1 !important;
   transform: translateX(0) !important;
   visibility: visible !important;
 }
 
 /* Arrow for the pill removed as per request */
-
-
-

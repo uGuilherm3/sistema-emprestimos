@@ -1,14 +1,14 @@
 // src/App.jsx
 // Componente raiz do sistema TI Lend.
 // Controla: autenticação, layout da sidebar, roteamento entre módulos e tema claro/escuro.
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { api } from './utils/apiClient';
 import {
   Home, Activity, CalendarDays, FileText, Settings,
   Search, Bell, LogOut,
-  ChevronUp, ChevronDown, ArrowUpRight, ArrowDownLeft, X, Trash2,
-  Menu, Sun, Moon, Globe, Inbox, AlertTriangle, ArrowRight, ArrowLeft, CheckCircle2, ListChecks, Music, LayoutGrid, Printer, MessageSquare, Sparkles, Calendar, Laptop, ShoppingBag, FilePenLine, ScreenShare, Wrench
+  ArrowUpRight, ArrowDownLeft, X, Trash2,
+  Menu, Sun, Moon, Globe, AlertTriangle, ArrowRight, ArrowLeft, CheckCircle2, ListChecks, LayoutGrid, Printer, MessageSquare, Calendar, Laptop, ShoppingBag, FilePenLine, Wrench
 } from 'lucide-react';
 import DashboardMetricas from './DashboardMetricas';
 import CadastroItem from './CadastroItem';
@@ -19,7 +19,6 @@ import EditarPerfil from './EditarPerfil';
 import CalendarioAgendamentos from './CalendarioAgendamentos';
 import PortalSolicitante from './PortalSolicitante';
 import RelatoriosExportacao from './RelatoriosExportacao';
-import DocumentosAssinados from './DocumentosAssinados';
 import ChamadosAdmin from './ChamadosAdmin';
 import PrintersAdmin from './PrintersAdmin';
 import DetalhesGerencial from './DetalhesGerencial';
@@ -53,14 +52,14 @@ const levenshtein = (a, b) => {
 // Módulos exibidos na tela de seleção (launcher) após o login.
 // roles define quais tipos de usuário podem ver cada módulo.
 const LAUNCHER_MODULOS = [
-  { id: 'dashboard',        nome: 'Dashboard',   icon: Home,        rota: '/',                  roles: ['adm'] },
-  { id: 'agenda',           nome: 'Agenda',       icon: Calendar,    rota: '/agenda',             roles: ['default', 'tecnico', 'adm'] },
-  { id: 'estoque',          nome: 'Empréstimos',  icon: Laptop,      rota: '/estoque',            roles: ['tecnico', 'adm'] },
-  { id: 'portal',           nome: 'Portal',       icon: ShoppingBag, rota: '/portal',             roles: ['default', 'tecnico', 'adm'] },
-  { id: 'chamados_externos',nome: 'Chamados',     icon: LayoutGrid,  rota: '/chamados_externos',  roles: ['tecnico', 'adm'] },
-  { id: 'impressoras',      nome: 'Ativos',       icon: Printer,     rota: '/impressoras',        roles: ['tecnico', 'adm'] },
-  { id: 'manutencoes',      nome: 'Manutenções',  icon: Wrench,      rota: '/manutencoes',        roles: ['tecnico', 'adm'] },
-  { id: 'relatorios',       nome: 'Relatórios',   icon: FileText,    rota: '/relatorios',         roles: ['adm'] },
+  { id: 'dashboard', nome: 'Dashboard', icon: Home, rota: '/', roles: ['adm'] },
+  { id: 'agenda', nome: 'Agenda', icon: Calendar, rota: '/agenda', roles: ['default', 'tecnico', 'adm'] },
+  { id: 'estoque', nome: 'Empréstimos', icon: Laptop, rota: '/estoque', roles: ['tecnico', 'adm'] },
+  { id: 'portal', nome: 'Portal', icon: ShoppingBag, rota: '/portal', roles: ['default', 'tecnico', 'adm'] },
+  { id: 'chamados_externos', nome: 'Chamados', icon: LayoutGrid, rota: '/chamados_externos', roles: ['tecnico', 'adm'] },
+  { id: 'impressoras', nome: 'Ativos', icon: Printer, rota: '/impressoras', roles: ['tecnico', 'adm'] },
+  { id: 'manutencoes', nome: 'Manutenções', icon: Wrench, rota: '/manutencoes', roles: ['tecnico', 'adm'] },
+  { id: 'relatorios', nome: 'Relatórios', icon: FileText, rota: '/relatorios', roles: ['adm'] },
 ];
 
 // Converte tipo_usuario do banco para o role simplificado usado no launcher e permissões.
@@ -71,9 +70,9 @@ const tipoParaRole = (tipo) => {
 };
 
 const PERMISSIONS = {
-  default:    new Set(['agenda', 'portal', 'perfil', 'chamados_externos']),
+  default: new Set(['agenda', 'portal', 'perfil', 'chamados_externos']),
   solicitante: new Set(['agenda', 'portal', 'perfil', 'chamados_externos']),
-  tecnico:    new Set(['agenda', 'estoque', 'saidas', 'entradas', 'calendario', 'chamados_externos', 'impressoras', 'bot_conhecimento', 'relatorios', 'portal', 'detalhes', 'perfil', 'manutencoes']),
+  tecnico: new Set(['agenda', 'estoque', 'saidas', 'entradas', 'calendario', 'chamados_externos', 'impressoras', 'bot_conhecimento', 'relatorios', 'portal', 'detalhes', 'perfil', 'manutencoes']),
 };
 
 const FIRST_ALLOWED_ROUTE = {
@@ -106,10 +105,10 @@ const MiniRing = ({ pct = 65, label, color = '#254E70' }) => {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-1.5">
       <svg width="56" height="56" viewBox="0 0 56 56">
-        <circle cx="28" cy="28" r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="5"/>
+        <circle cx="28" cy="28" r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="5" />
         <circle cx="28" cy="28" r={r} fill="none" stroke={color} strokeWidth="5"
-          strokeDasharray={`${(pct/100)*c} ${c}`} strokeLinecap="round"
-          transform="rotate(-90 28 28)" style={{transition:'stroke-dasharray 0.9s ease'}}/>
+          strokeDasharray={`${(pct / 100) * c} ${c}`} strokeLinecap="round"
+          transform="rotate(-90 28 28)" style={{ transition: 'stroke-dasharray 0.9s ease' }} />
         <text x="28" y="33" textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize="10" fontWeight="600">{pct}%</text>
       </svg>
       <span className="text-[8px] text-slate-500 dark:text-[#505050] uppercase tracking-widest">{label}</span>
@@ -124,7 +123,7 @@ const MiniBars = ({ bars = [], label }) => (
       <div key={i} className="flex items-center gap-2">
         <span className="text-[8px] text-slate-400 dark:text-[#606060] w-14 shrink-0 truncate">{b.label}</span>
         <div className="flex-1 h-[3px] bg-white/5 rounded-full overflow-hidden">
-          <div className="h-full rounded-full" style={{width:`${b.pct}%`, background:b.color||'#254E70', transition:'width 0.9s ease'}}/>
+          <div className="h-full rounded-full" style={{ width: `${b.pct}%`, background: b.color || '#254E70', transition: 'width 0.9s ease' }} />
         </div>
       </div>
     ))}
@@ -133,10 +132,8 @@ const MiniBars = ({ bars = [], label }) => (
 );
 
 // ── Cards de preview por módulo ───────────────────────────────
-const PREVIEW_CARD_BASE = 'bg-white/[0.03] rounded-2xl h-full overflow-hidden';
+const PREVIEW_CARD_BASE = 'bg-[var(--bg-card)] rounded-2xl h-full overflow-hidden';
 
-  const G = 14; // gap px aumentado
-  const H = 560; // altura total aumentada
 
 const LgCard = ({ titulo, desc }) => (
   <div className={`${PREVIEW_CARD_BASE} flex flex-col justify-end p-12`}>
@@ -157,7 +154,7 @@ const SmCard = ({ label, val }) => (
 
 const ModuloPreviewCards = ({ moduleId, itens = [], notificacoes = [] }) => {
   const total = itens.length;
-  const disp  = itens.filter(i => (i.quantidade_disponivel || 0) > 0).length;
+  const disp = itens.filter(i => (i.quantidade_disponivel || 0) > 0).length;
   const atraso = notificacoes.filter(n => n.tipo === 'atraso').length;
   const dispPct = Math.round(disp / Math.max(1, total) * 100);
 
@@ -165,7 +162,7 @@ const ModuloPreviewCards = ({ moduleId, itens = [], notificacoes = [] }) => {
     dashboard: {
       layout: 'A',
       large: { titulo: 'Dashboard Geral', desc: 'Métricas executivas de empréstimos, devoluções, agenda e auditoria em tempo real.' },
-      medium: <MiniRing pct={dispPct} label="Disponibilidade" color="#10b981"/>,
+      medium: <MiniRing pct={dispPct} label="Disponibilidade" color="#10b981" />,
       s1: { label: 'Itens Cadastrados', val: total },
       s2: { label: 'Em Atraso', val: atraso || '0' },
     },
@@ -178,42 +175,42 @@ const ModuloPreviewCards = ({ moduleId, itens = [], notificacoes = [] }) => {
           <span className="text-[14px] text-slate-500 dark:text-[#505050] uppercase tracking-wider mt-5 text-center leading-tight">Eventos na Semana</span>
         </div>
       ),
-      s1: { label: 'Hoje', val: new Date().toLocaleDateString('pt-BR',{weekday:'short'}).replace('.','').toUpperCase() },
-      s2: { label: 'Mês', val: new Date().toLocaleDateString('pt-BR',{month:'short'}).replace('.','').toUpperCase() },
+      s1: { label: 'Hoje', val: new Date().toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').toUpperCase() },
+      s2: { label: 'Mês', val: new Date().toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').toUpperCase() },
     },
     estoque: {
       layout: 'C',
       large: { titulo: 'Gestão de Empréstimos', desc: 'Registre saídas e devoluções, controle estoque e monitore empréstimos em aberto.' },
       medium: <MiniBars label="Distribuição do estoque" bars={[
-        { label:'Disponível', pct: dispPct, color:'#10b981' },
-        { label:'Em uso', pct: 100 - dispPct, color:'#f59e0b' },
-        { label:'Em atraso', pct: Math.min(100, atraso * 12), color:'#ef4444' },
-      ]}/>,
+        { label: 'Disponível', pct: dispPct, color: '#10b981' },
+        { label: 'Em uso', pct: 100 - dispPct, color: '#f59e0b' },
+        { label: 'Em atraso', pct: Math.min(100, atraso * 12), color: '#ef4444' },
+      ]} />,
       s1: { label: 'Total Itens', val: total },
       s2: { label: 'Disponíveis', val: disp },
     },
     chamados_externos: {
       layout: 'D',
       large: { titulo: 'Painel de Chamados', desc: 'Central integrada de suporte TI — abra, acompanhe e resolva chamados por protocolo.' },
-      medium: <MiniRing pct={65} label="Resolvidos" color="#3b82f6"/>,
-      s1: { label: 'Novos', val: notificacoes.filter(n=>n.tipo==='chamado_novo').length || '—' },
-      s2: { label: 'Atualizados', val: notificacoes.filter(n=>n.tipo==='chamado_status').length || '—' },
+      medium: <MiniRing pct={65} label="Resolvidos" color="#3b82f6" />,
+      s1: { label: 'Novos', val: notificacoes.filter(n => n.tipo === 'chamado_novo').length || '—' },
+      s2: { label: 'Atualizados', val: notificacoes.filter(n => n.tipo === 'chamado_status').length || '—' },
     },
     impressoras: {
       layout: 'A',
       large: { titulo: 'Gestão de Ativos', desc: 'Monitor de impressoras em tempo real — status online/offline, toner e histórico de impressões.' },
       medium: <MiniBars label="Nível de toner" bars={[
-        { label:'Crítico', pct:15, color:'#ef4444' },
-        { label:'Normal', pct:62, color:'#f59e0b' },
-        { label:'Cheio', pct:88, color:'#10b981' },
-      ]}/>,
+        { label: 'Crítico', pct: 15, color: '#ef4444' },
+        { label: 'Normal', pct: 62, color: '#f59e0b' },
+        { label: 'Cheio', pct: 88, color: '#10b981' },
+      ]} />,
       s1: { label: 'Monitoradas', val: '16' },
       s2: { label: 'Online', val: '14' },
     },
     manutencoes: {
       layout: 'B',
       large: { titulo: 'Manutenções', desc: 'Registre ordens de serviço preventivas e corretivas com histórico completo de intervenções.' },
-      medium: <MiniRing pct={42} label="Em andamento" color="#f59e0b"/>,
+      medium: <MiniRing pct={42} label="Em andamento" color="#f59e0b" />,
       s1: { label: 'Abertas', val: '—' },
       s2: { label: 'Concluídas', val: '—' },
     },
@@ -221,19 +218,19 @@ const ModuloPreviewCards = ({ moduleId, itens = [], notificacoes = [] }) => {
       layout: 'C',
       large: { titulo: 'Inteligência e Relatórios', desc: 'Exporte dados em CSV/Excel com filtros avançados de período, categoria e tipo.' },
       medium: <MiniBars label="Categorias exportadas" bars={[
-        { label:'Empréstimos', pct:80, color:'#254E70' },
-        { label:'Devoluções', pct:55, color:'#8D3046' },
-        { label:'Auditoria', pct:35, color:'#64748b' },
-      ]}/>,
+        { label: 'Empréstimos', pct: 80, color: '#254E70' },
+        { label: 'Devoluções', pct: 55, color: '#8D3046' },
+        { label: 'Auditoria', pct: 35, color: '#64748b' },
+      ]} />,
       s1: { label: 'Total Itens', val: total },
       s2: { label: 'Alertas', val: notificacoes.length },
     },
     portal: {
       layout: 'D',
       large: { titulo: 'Portal do Solicitante', desc: 'Espaço público para colaboradores solicitarem empréstimos de equipamentos com aprovação em tempo real.' },
-      medium: <MiniRing pct={dispPct} label="Disponível" color="#10b981"/>,
+      medium: <MiniRing pct={dispPct} label="Disponível" color="#10b981" />,
       s1: { label: 'Disponíveis', val: disp },
-      s2: { label: 'Categorias', val: [...new Set(itens.map(i=>i.categoria).filter(Boolean))].length || '—' },
+      s2: { label: 'Categorias', val: [...new Set(itens.map(i => i.categoria).filter(Boolean))].length || '—' },
     },
   }[moduleId];
 
@@ -247,48 +244,48 @@ const ModuloPreviewCards = ({ moduleId, itens = [], notificacoes = [] }) => {
   const layouts = {
     // Large esquerda (flex), medium + smalls direita (fixo baseado em Sq)
     A: (
-      <div style={{display:'grid', gridTemplateColumns:`1fr ${ColW}`, gridTemplateRows:'1fr 1fr', gap:G, height:H}}>
-        <div style={{gridRow:'1/3'}}><LgCard {...cfg.large}/></div>
+      <div style={{ display: 'grid', gridTemplateColumns: `1fr ${ColW}`, gridTemplateRows: '1fr 1fr', gap: G, height: H }}>
+        <div style={{ gridRow: '1/3' }}><LgCard {...cfg.large} /></div>
         <MdCard>{cfg.medium}</MdCard>
-        <div style={{display:'grid', gridTemplateColumns:`${Sq} ${Sq}`, gap:G}}>
-          <SmCard {...cfg.s1}/><SmCard {...cfg.s2}/>
+        <div style={{ display: 'grid', gridTemplateColumns: `${Sq} ${Sq}`, gap: G }}>
+          <SmCard {...cfg.s1} /><SmCard {...cfg.s2} />
         </div>
       </div>
     ),
     // Large topo (100%), medium + smalls embaixo (3 quadrados)
     B: (
-      <div className="mx-auto" style={{maxWidth: `calc(${Sq} * 3 + ${G}px * 2)`}}>
-        <div style={{display:'grid', gridTemplateRows:'1.3fr 1fr', gap:G, height:H}}>
-          <LgCard {...cfg.large}/>
-          <div style={{display:'grid', gridTemplateColumns:`${Sq} ${Sq} ${Sq}`, gap:G}}>
+      <div className="mx-auto" style={{ maxWidth: `calc(${Sq} * 3 + ${G}px * 2)` }}>
+        <div style={{ display: 'grid', gridTemplateRows: '1.3fr 1fr', gap: G, height: H }}>
+          <LgCard {...cfg.large} />
+          <div style={{ display: 'grid', gridTemplateColumns: `${Sq} ${Sq} ${Sq}`, gap: G }}>
             <MdCard>{cfg.medium}</MdCard>
-            <SmCard {...cfg.s1}/><SmCard {...cfg.s2}/>
+            <SmCard {...cfg.s1} /><SmCard {...cfg.s2} />
           </div>
         </div>
       </div>
     ),
     // Medium + smalls esquerda, Large direita
     C: (
-      <div style={{display:'grid', gridTemplateColumns:`${ColW} 1fr`, gridTemplateRows:'1fr 1fr', gap:G, height:H}}>
+      <div style={{ display: 'grid', gridTemplateColumns: `${ColW} 1fr`, gridTemplateRows: '1fr 1fr', gap: G, height: H }}>
         <MdCard>{cfg.medium}</MdCard>
-        <div style={{gridColumn:'2', gridRow:'1/3'}}><LgCard {...cfg.large}/></div>
-        <div style={{display:'grid', gridTemplateColumns:`${Sq} ${Sq}`, gap:G}}>
-          <SmCard {...cfg.s1}/><SmCard {...cfg.s2}/>
+        <div style={{ gridColumn: '2', gridRow: '1/3' }}><LgCard {...cfg.large} /></div>
+        <div style={{ display: 'grid', gridTemplateColumns: `${Sq} ${Sq}`, gap: G }}>
+          <SmCard {...cfg.s1} /><SmCard {...cfg.s2} />
         </div>
       </div>
     ),
     // Medium esquerda alta, smalls centro-topo, Large direita baixo
     D: (
-      <div style={{display:'grid', gridTemplateColumns:`${Sq} ${Sq} 1fr`, gridTemplateRows:'1fr 1fr', gap:G, height:H}}>
-        <div style={{gridRow:'1/3'}}><MdCard>{cfg.medium}</MdCard></div>
-        <SmCard {...cfg.s1}/><SmCard {...cfg.s2}/>
-        <div style={{gridColumn:'2/4'}}><LgCard {...cfg.large}/></div>
+      <div style={{ display: 'grid', gridTemplateColumns: `${Sq} ${Sq} 1fr`, gridTemplateRows: '1fr 1fr', gap: G, height: H }}>
+        <div style={{ gridRow: '1/3' }}><MdCard>{cfg.medium}</MdCard></div>
+        <SmCard {...cfg.s1} /><SmCard {...cfg.s2} />
+        <div style={{ gridColumn: '2/4' }}><LgCard {...cfg.large} /></div>
       </div>
     ),
   };
 
   return (
-    <div key={moduleId} className="w-full max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-3 duration-300">
+    <div key={moduleId} className="w-full max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-200">
       {layouts[cfg.layout]}
     </div>
   );
@@ -307,6 +304,8 @@ export default function App() {
   const [showLauncher, setShowLauncher] = useState(false);
   const [animandoLauncher, setAnimandoLauncher] = useState(false);
   const [moduloPreview, setModuloPreview] = useState(null);
+  const [dockMouseX, setDockMouseX] = useState(null);
+  const dockRef = useRef(null);
 
   const [abaPortal, setAbaPortal] = useState('catalogo');
   const location = useLocation();
@@ -327,8 +326,8 @@ export default function App() {
   const [loadingDetalhe, setLoadingDetalhe] = useState(false);
   const [triggerAtualizacao, setTriggerAtualizacao] = useState(0);
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isGestaoOpen, setIsGestaoOpen] = useState(() => {
+  const [isSidebarOpen] = useState(false);
+  const [isGestaoOpen] = useState(() => {
     const salvo = localStorage.getItem('tilend_gestao_open');
     return salvo !== null ? JSON.parse(salvo) : true;
   });
@@ -715,6 +714,32 @@ export default function App() {
 
       const idSalvo = uidFromUrl || localStorage.getItem('tilend_user_id');
       if (idSalvo) {
+        // Usuário local (dev/local) — restaura da sessionStorage sem bater na API
+        const localJson = sessionStorage.getItem('tilend_local_user');
+        if (localJson) {
+          try {
+            const d = JSON.parse(localJson);
+            if (d.id === idSalvo) {
+              const userMock = {
+                id: d.id, username: d.username, nome: d.nome,
+                setor: d.setor, tipoUsuario: d.tipo_usuario,
+                get: (field) => {
+                  if (field === 'username') return d.username;
+                  if (field === 'nome') return d.nome;
+                  if (field === 'setor') return d.setor;
+                  if (field === 'tipoUsuario') return d.tipo_usuario;
+                  return d[field];
+                },
+                save: async () => {}
+              };
+              setUsuarioAtual(userMock);
+              if (sessionStorage.getItem('tilend_launcher_pending')) setShowLauncher(true);
+              setIsLoadingAuth(false);
+              return;
+            }
+          } catch {}
+        }
+
         // Busca os dados do usuário na tabela 'users' pelo ID salvo
         const { data: perfil } = await api.users.get(idSalvo);
 
@@ -740,6 +765,7 @@ export default function App() {
             save: async () => { /* Heartbeat mock */ }
           };
           setUsuarioAtual(userMock);
+          if (sessionStorage.getItem('tilend_launcher_pending')) setShowLauncher(true);
           setIsLoadingAuth(false);
           return;
         }
@@ -1019,7 +1045,19 @@ export default function App() {
   // Chamado pelo componente Login quando o usuário escolhe um módulo no launcher.
   // Recebe o objeto do usuário e a rota escolhida, seta o estado e navega.
   const handleLoginSucesso = (userMock) => {
-    // Login concluído — seta o usuário e mostra o launcher para escolher o módulo
+    // Marca que o launcher deve aparecer (persiste no reload da aba)
+    sessionStorage.setItem('tilend_launcher_pending', '1');
+    // Se for usuário local (sem banco), salva os dados brutos para restaurar no reload
+    const uid = userMock.id || '';
+    if (uid.startsWith('dev-') || uid.startsWith('local-')) {
+      sessionStorage.setItem('tilend_local_user', JSON.stringify({
+        id: userMock.id,
+        username: userMock.username || userMock.get('username'),
+        nome: userMock.nome || userMock.get('nome'),
+        setor: userMock.setor || userMock.get('setor'),
+        tipo_usuario: userMock.tipoUsuario || userMock.get('tipoUsuario'),
+      }));
+    }
     setUsuarioAtual(userMock);
     setShowLauncher(true);
   };
@@ -1027,6 +1065,7 @@ export default function App() {
   // Chamado quando o usuário clica num módulo no launcher.
   // Toca a animação de saída, depois navega para o módulo escolhido.
   const abrirModuloLauncher = (rota) => {
+    sessionStorage.removeItem('tilend_launcher_pending');
     setModuloPreview(null);
     setAnimandoLauncher(true);
     setTimeout(() => {
@@ -1211,8 +1250,7 @@ export default function App() {
     'detalhes': { label: 'Detalhamento Técnico', icon: ArrowLeft }
   };
 
-  const HeaderIcon = headerInfo[abaAtiva]?.icon || Home;
-  const legendaUsuario = usuarioAtual.get('atribuicao') || 'Técnico de TI';
+const legendaUsuario = usuarioAtual.get('atribuicao') || 'Técnico de TI';
 
   return (
     <div key="view-dashboard" className="flex h-screen bg-[var(--bg-page)] text-slate-900 dark:text-[#F8FAFC] selection:bg-[#8B5CF6]/30 font-sans transition-colors duration-300 overflow-hidden">
@@ -1352,117 +1390,117 @@ export default function App() {
           <div className="flex items-center gap-4">
             {/* Esconde nome da página e botões contextuais no launcher */}
             {!showLauncher && <>
-            {abaAtiva === 'detalhes' && (
-              <button 
-                onClick={voltarDosDetalhes}
-                className="bg-[var(--bg-card)] p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-[var(--bg-hover)] hover:text-slate-900 dark:hover:text-white transition-all shadow-sm"
-                title="Voltar"
-              >
-                <ArrowLeft size={18} strokeWidth={2.5} />
-              </button>
-            )}
-            <div className={`flex flex-col ${abaAtiva === 'detalhes' ? '' : 'ml-2'}`}>
-              <span className="text-lg font-bold text-slate-900 dark:text-white tracking-tight leading-none">
-                {abaAtiva === 'detalhes' && itemDetalhado?.dados
-                  ? (itemDetalhado.dados.protocolo || itemDetalhado.dados.id?.split('-')[0].toUpperCase())
-                  : headerInfo[abaAtiva]?.label}
-              </span>
               {abaAtiva === 'detalhes' && (
-                <span className="text-[10px] font-black text-[#254E70] dark:text-blue-400 uppercase tracking-widest mt-1">
-                  {itemDetalhado?.tipo === 'chamado' ? 'Ticket de Suporte' : 'Termo de Empréstimo'}
-                </span>
+                <button
+                  onClick={voltarDosDetalhes}
+                  className="bg-[var(--bg-card)] p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-[var(--bg-hover)] hover:text-slate-900 dark:hover:text-white transition-all shadow-sm"
+                  title="Voltar"
+                >
+                  <ArrowLeft size={18} strokeWidth={2.5} />
+                </button>
               )}
-            </div>
-
-            {abaAtiva === 'portal' && (
-              <div className="flex items-center gap-2 ml-6 animate-in fade-in slide-in-from-left-2 duration-500">
-                <button
-                  onClick={() => setAbaPortal('dashboard')}
-                  className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
-                  style={{
-                    backgroundColor: abaPortal === 'dashboard' ? 'var(--bg-selected)' : 'var(--bg-soft)',
-                    color: abaPortal === 'dashboard' ? 'var(--text-selected)' : 'var(--text-muted)'
-                  }}
-                >
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => setAbaPortal('catalogo')}
-                  className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
-                  style={{
-                    backgroundColor: abaPortal === 'catalogo' ? 'var(--bg-selected)' : 'var(--bg-soft)',
-                    color: abaPortal === 'catalogo' ? 'var(--text-selected)' : 'var(--text-muted)'
-                  }}
-                >
-                  Catálogo
-                </button>
-                <button 
-                  onClick={() => setAbaPortal('historico')} 
-                  className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
-                  style={{
-                    backgroundColor: abaPortal === 'historico' ? 'var(--bg-selected)' : 'var(--bg-soft)',
-                    color: abaPortal === 'historico' ? 'var(--text-selected)' : 'var(--text-muted)'
-                  }}
-                >
-                  Meus Pedidos
-                </button>
+              <div className={`flex flex-col ${abaAtiva === 'detalhes' ? '' : 'ml-2'}`}>
+                <span className="text-lg font-bold text-slate-900 dark:text-white tracking-tight leading-none">
+                  {abaAtiva === 'detalhes' && itemDetalhado?.dados
+                    ? (itemDetalhado.dados.protocolo || itemDetalhado.dados.id?.split('-')[0].toUpperCase())
+                    : headerInfo[abaAtiva]?.label}
+                </span>
+                {abaAtiva === 'detalhes' && (
+                  <span className="text-[10px] font-black text-[#254E70] dark:text-blue-400 uppercase tracking-widest mt-1">
+                    {itemDetalhado?.tipo === 'chamado' ? 'Ticket de Suporte' : 'Termo de Empréstimo'}
+                  </span>
+                )}
               </div>
-            )}
 
-            {isGestaoActive && (
-              <div className="flex items-center gap-2 ml-6 animate-in fade-in slide-in-from-left-2 duration-500">
-                <button
-                  onClick={() => mudarAba('emprestimos')}
-                  className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
-                  style={{
-                    backgroundColor: abaAtiva === 'emprestimos' ? 'var(--bg-selected)' : 'var(--bg-soft)',
-                    color: abaAtiva === 'emprestimos' ? 'var(--text-selected)' : 'var(--text-muted)'
-                  }}
-                >
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => mudarAba('estoque')}
-                  className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
-                  style={{
-                    backgroundColor: abaAtiva === 'estoque' ? 'var(--bg-selected)' : 'var(--bg-soft)',
-                    color: abaAtiva === 'estoque' ? 'var(--text-selected)' : 'var(--text-muted)'
-                  }}
-                >
-                  Estoque
-                </button>
-                <button 
-                  onClick={() => mudarAba('saidas')} 
-                  className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
-                  style={{
-                    backgroundColor: abaAtiva === 'saidas' ? 'var(--bg-selected)' : 'var(--bg-soft)',
-                    color: abaAtiva === 'saidas' ? 'var(--text-selected)' : 'var(--text-muted)'
-                  }}
-                >
-                  Saídas
-                </button>
-                <button 
-                  onClick={() => mudarAba('entradas')} 
-                  className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
-                  style={{
-                    backgroundColor: abaAtiva === 'entradas' ? 'var(--bg-selected)' : 'var(--bg-soft)',
-                    color: abaAtiva === 'entradas' ? 'var(--text-selected)' : 'var(--text-muted)'
-                  }}
-                >
-                  Entradas
-                </button>
-                <button 
-                  onClick={() => mudarAba('calendario')} 
-                  className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
-                  style={{
-                    backgroundColor: abaAtiva === 'calendario' ? 'var(--bg-selected)' : 'var(--bg-soft)',
-                    color: abaAtiva === 'calendario' ? 'var(--text-selected)' : 'var(--text-muted)'
-                  }}
-                >
-                  Reservas
-                </button>
-              </div>
-            )}
+              {abaAtiva === 'portal' && (
+                <div className="flex items-center gap-2 ml-6 animate-in fade-in slide-in-from-left-2 duration-500">
+                  <button
+                    onClick={() => setAbaPortal('dashboard')}
+                    className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                    style={{
+                      backgroundColor: abaPortal === 'dashboard' ? 'var(--bg-selected)' : 'var(--bg-soft)',
+                      color: abaPortal === 'dashboard' ? 'var(--text-selected)' : 'var(--text-muted)'
+                    }}
+                  >
+                    Dashboard
+                  </button>
+                  <button
+                    onClick={() => setAbaPortal('catalogo')}
+                    className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                    style={{
+                      backgroundColor: abaPortal === 'catalogo' ? 'var(--bg-selected)' : 'var(--bg-soft)',
+                      color: abaPortal === 'catalogo' ? 'var(--text-selected)' : 'var(--text-muted)'
+                    }}
+                  >
+                    Catálogo
+                  </button>
+                  <button
+                    onClick={() => setAbaPortal('historico')}
+                    className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                    style={{
+                      backgroundColor: abaPortal === 'historico' ? 'var(--bg-selected)' : 'var(--bg-soft)',
+                      color: abaPortal === 'historico' ? 'var(--text-selected)' : 'var(--text-muted)'
+                    }}
+                  >
+                    Meus Pedidos
+                  </button>
+                </div>
+              )}
+
+              {isGestaoActive && (
+                <div className="flex items-center gap-2 ml-6 animate-in fade-in slide-in-from-left-2 duration-500">
+                  <button
+                    onClick={() => mudarAba('emprestimos')}
+                    className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                    style={{
+                      backgroundColor: abaAtiva === 'emprestimos' ? 'var(--bg-selected)' : 'var(--bg-soft)',
+                      color: abaAtiva === 'emprestimos' ? 'var(--text-selected)' : 'var(--text-muted)'
+                    }}
+                  >
+                    Dashboard
+                  </button>
+                  <button
+                    onClick={() => mudarAba('estoque')}
+                    className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                    style={{
+                      backgroundColor: abaAtiva === 'estoque' ? 'var(--bg-selected)' : 'var(--bg-soft)',
+                      color: abaAtiva === 'estoque' ? 'var(--text-selected)' : 'var(--text-muted)'
+                    }}
+                  >
+                    Estoque
+                  </button>
+                  <button
+                    onClick={() => mudarAba('saidas')}
+                    className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                    style={{
+                      backgroundColor: abaAtiva === 'saidas' ? 'var(--bg-selected)' : 'var(--bg-soft)',
+                      color: abaAtiva === 'saidas' ? 'var(--text-selected)' : 'var(--text-muted)'
+                    }}
+                  >
+                    Saídas
+                  </button>
+                  <button
+                    onClick={() => mudarAba('entradas')}
+                    className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                    style={{
+                      backgroundColor: abaAtiva === 'entradas' ? 'var(--bg-selected)' : 'var(--bg-soft)',
+                      color: abaAtiva === 'entradas' ? 'var(--text-selected)' : 'var(--text-muted)'
+                    }}
+                  >
+                    Entradas
+                  </button>
+                  <button
+                    onClick={() => mudarAba('calendario')}
+                    className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                    style={{
+                      backgroundColor: abaAtiva === 'calendario' ? 'var(--bg-selected)' : 'var(--bg-soft)',
+                      color: abaAtiva === 'calendario' ? 'var(--text-selected)' : 'var(--text-muted)'
+                    }}
+                  >
+                    Reservas
+                  </button>
+                </div>
+              )}
             </>}
           </div>
 
@@ -1548,22 +1586,21 @@ export default function App() {
                               }}
                               className="p-5 rounded-2xl border border-slate-100 dark:border-white/5 hover:bg-[var(--bg-page)] dark:hover:bg-[var(--bg-card)]/[0.02] bg-[var(--bg-card)] dark:bg-transparent transition-colors flex gap-4 group relative shadow-sm cursor-pointer"
                             >
-                              <div className={`p-3 rounded-xl shrink-0 h-fit shadow-inner border border-transparent ${
-                                n.tipo === 'atraso'          ? 'bg-[#8D3046]/10 text-[#8D3046] border-[#8D3046]/20' :
-                                n.tipo === 'pendente'        ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                                n.tipo === 'agendado'        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                                n.tipo === 'saida'           ? 'bg-[#254E70]/10 text-[#254E70] border-[#254E70]/20' :
-                                n.tipo === 'chamado_novo'    ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' :
-                                n.tipo === 'chamado_status'  ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                                                               'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                              }`}>
-                                {n.tipo === 'atraso'         ? <AlertTriangle size={16} /> :
-                                 n.tipo === 'pendente'       ? <Globe size={16} /> :
-                                 n.tipo === 'agendado'       ? <CalendarDays size={16} /> :
-                                 n.tipo === 'saida'          ? <ArrowUpRight size={16} /> :
-                                 n.tipo === 'chamado_novo'   ? <MessageSquare size={16} /> :
-                                 n.tipo === 'chamado_status' ? <Activity size={16} /> :
-                                                               <CheckCircle2 size={16} />}
+                              <div className={`p-3 rounded-xl shrink-0 h-fit shadow-inner border border-transparent ${n.tipo === 'atraso' ? 'bg-[#8D3046]/10 text-[#8D3046] border-[#8D3046]/20' :
+                                  n.tipo === 'pendente' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                    n.tipo === 'agendado' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                      n.tipo === 'saida' ? 'bg-[#254E70]/10 text-[#254E70] border-[#254E70]/20' :
+                                        n.tipo === 'chamado_novo' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' :
+                                          n.tipo === 'chamado_status' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                                            'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                }`}>
+                                {n.tipo === 'atraso' ? <AlertTriangle size={16} /> :
+                                  n.tipo === 'pendente' ? <Globe size={16} /> :
+                                    n.tipo === 'agendado' ? <CalendarDays size={16} /> :
+                                      n.tipo === 'saida' ? <ArrowUpRight size={16} /> :
+                                        n.tipo === 'chamado_novo' ? <MessageSquare size={16} /> :
+                                          n.tipo === 'chamado_status' ? <Activity size={16} /> :
+                                            <CheckCircle2 size={16} />}
                               </div>
                               <div className="flex-1">
                                 <div className="flex justify-between items-start mb-1">
@@ -1711,7 +1748,17 @@ export default function App() {
           /* ── LAUNCHER: conteúdo da tela de seleção de módulo ─────────────────
              O header real do sistema já está renderizado acima, incluindo
              notificações, dark mode, Spotify e foto de perfil. */
-          <div className={`flex-1 flex flex-col items-center justify-start pb-[10vh] relative overflow-y-auto custom-scrollbar animate-in fade-in duration-700 transition-all duration-500 ${moduloPreview ? 'pt-[3vh]' : 'pt-[12vh]'}`}>
+          <div className="flex-1 flex flex-col items-center justify-start pb-[10vh] relative overflow-y-auto custom-scrollbar animate-in fade-in duration-700">
+
+            {/* Espaçador animado — centra o texto quando vazio, encolhe para o topo ao selecionar */}
+            <div
+              className="shrink-0"
+              style={{
+                height: moduloPreview ? '3vh' : '28vh',
+                transition: 'height 600ms cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            />
+
             <div className="flex flex-col items-center justify-center w-full max-w-5xl px-6 mb-12 text-center transition-all duration-500">
               <div className={`flex flex-col items-center transition-all duration-500 ${moduloPreview ? 'mb-2 origin-top' : 'mb-8'}`}>
                 <span className={`font-black text-slate-500 dark:text-[#505050] uppercase tracking-[0.4em] transition-all duration-500 ${moduloPreview ? 'text-[8px] mb-2' : 'text-[10px] mb-4'}`}>
@@ -1745,70 +1792,103 @@ export default function App() {
             {/* Ícones dos módulos — fixos na parte inferior */}
             <div className="fixed bottom-[2vw] left-1/2 -translate-x-1/2 z-[100] transition-all duration-500">
               <div
+                ref={dockRef}
+                onMouseMove={(e) => setDockMouseX(e.clientX)}
+                onMouseLeave={() => setDockMouseX(null)}
                 style={{
                   opacity: animandoLauncher ? 0 : 1,
                   transform: animandoLauncher ? 'translateX(-55vw) scale(0.82)' : 'translateX(0) scale(1)',
                   transition: 'opacity 620ms cubic-bezier(0.4, 0, 0.2, 1), transform 620ms cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
-                className="flex flex-row items-center gap-4 px-2"
+                className="flex flex-row items-end gap-4 px-2"
               >
                 {LAUNCHER_MODULOS
                   .filter(m => m.roles.includes(tipoParaRole(usuarioAtual.get('tipoUsuario'))))
                   .map((modulo, index) => {
                     const Icon = modulo.icon;
                     const isSelected = moduloPreview === modulo.id;
+
+                    // Calcula escala estilo dock do macOS com base na distância do cursor
+                    const ITEM_W = 52 + 16; // largura do ícone + gap
+                    const dockScale = (() => {
+                      if (dockMouseX === null || !dockRef.current) return 1;
+                      const rect = dockRef.current.getBoundingClientRect();
+                      const center = rect.left + index * ITEM_W + 24;
+                      const dist = Math.abs(dockMouseX - center);
+                      const radius = 100;
+                      if (dist >= radius) return 1;
+                      const t = 1 - dist / radius;
+                      return 1 + 0.2 * (t * t);
+                    })();
+
                     return (
-                      <button
-                        key={modulo.id}
-                        onClick={() => {
-                          if (isSelected) abrirModuloLauncher(modulo.rota);
-                          else setModuloPreview(modulo.id);
-                        }}
-                        disabled={animandoLauncher}
-                        style={{
-                          animationName: 'slideUpFade',
-                          animationDuration: '0.22s',
-                          animationTimingFunction: 'ease',
-                          animationDelay: `${index * 55}ms`,
-                          animationFillMode: 'both',
-                        }}
-                        className={`group relative flex items-center justify-center w-[62px] h-[62px] transition-all duration-200 cursor-pointer ${isSelected ? 'text-[#254E70] dark:text-white scale-110' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70] dark:hover:text-white'}`}
-                      >
-                        <div className={`absolute bottom-[-4px] left-1/2 -translate-x-1/2 h-[5px] rounded-t-full bg-[#254E70] shadow-[0_0_12px_rgba(37,78,112,0.6)] transition-all duration-300 ${isSelected ? 'w-6 opacity-100' : 'w-0 opacity-0 group-hover:w-6 group-hover:opacity-100'}`} />
-                        <Icon size={22} className="shrink-0 transition-transform group-hover:scale-110" />
-                        <div className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 px-[14px] py-[8px] bg-[#0f172a] dark:bg-white text-white dark:text-[#0f172a] text-[12px] font-medium rounded-full whitespace-nowrap pointer-events-none transition-all duration-300 opacity-0 translate-y-2 group-hover:translate-y-0 group-hover:opacity-100 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3)] dark:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.5)] border border-white/10 dark:border-black/10 z-[1000000]">
+                      // group no wrapper — tooltip usa group-hover mas fica fora do scale
+                      <div key={modulo.id} className="group relative">
+
+                        {/* Bloco escalado pelo dock */}
+                        <div
+                          style={{
+                            transform: `translateY(-${(dockScale - 1) * 80}px) scale(${dockScale})`,
+                            transformOrigin: 'bottom center',
+                            transition: dockMouseX === null
+                              ? 'transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1)'
+                              : 'transform 80ms ease-out',
+                          }}
+                        >
+                          <button
+                            onClick={() => {
+                              if (isSelected) abrirModuloLauncher(modulo.rota);
+                              else setModuloPreview(modulo.id);
+                            }}
+                            disabled={animandoLauncher}
+                            style={{
+                              animationName: 'slideUpFade',
+                              animationDuration: '0.22s',
+                              animationTimingFunction: 'ease',
+                              animationDelay: `${index * 55}ms`,
+                              animationFillMode: 'both',
+                            }}
+                            className={`flex items-center justify-center w-[52px] h-[52px] cursor-pointer bg-[var(--bg-card)] rounded-xl ${isSelected ? 'text-[#254E70] dark:text-white shadow-lg' : 'text-slate-500 dark:text-[#606060] hover:text-[#254E70] dark:hover:text-white'}`}
+                          >
+                            <Icon size={20} className="shrink-0" />
+                          </button>
+                        </div>
+
+                        {/* Tooltip fora do container escalado — sempre no tamanho original */}
+                        <div className="absolute bottom-[calc(100%+14px)] left-1/2 -translate-x-1/2 px-[14px] py-[8px] bg-[#0f172a] dark:bg-white text-white dark:text-[#0f172a] text-[12px] font-medium rounded-full whitespace-nowrap pointer-events-none transition-all duration-300 opacity-0 translate-y-2 group-hover:-translate-y-5 group-hover:opacity-100 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3)] dark:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.5)] border border-white/10 dark:border-black/10 z-[1000000]">
                           {modulo.nome}
                         </div>
-                      </button>
+
+                      </div>
                     );
                   })}
               </div>
             </div>
           </div>
         ) : (
-        <div className={`flex-1 custom-scrollbar ${abaAtiva === 'agenda' || abaAtiva === 'detalhes' || abaAtiva === 'chamados_externos' ? 'overflow-hidden' : 'overflow-y-auto'}`} onClick={() => { setNotificacoesAberto(false); setMenuPerfilPopoverAberto(false); setIsSearchOpen(false); }}>
-          <div className={`border-r border-transparent border-b border-transparent flex flex-col ${['agenda', 'detalhes'].includes(abaAtiva) ? 'h-[calc(100vh-82px)] pb-0 m-0 px-[1%] pt-[1%]' : ['chamados_externos', 'saidas', 'estoque'].includes(abaAtiva) ? 'h-[calc(100vh-100px)] pb-[1%] m-[1%]' : 'min-h-full pb-[1%] m-[1%]'}`}>
-            <Routes>
-              <Route path="/" element={<DashboardMetricas triggerAtualizacao={triggerAtualizacao} usuarioAtual={usuarioAtual} onOpenDetails={abrirDetalhes} />} />
-              <Route path="/emprestimos" element={<div className="animate-in fade-in duration-500"><DashboardEmprestimos itens={itens} /></div>} />
-              <Route path="/estoque" element={<div className="h-full grid grid-cols-1 xl:grid-cols-3 gap-8 lg:gap-10 animate-in fade-in duration-500 items-stretch"><div className="xl:col-span-1 h-full"><CadastroItem onItemCadastrado={() => setTriggerAtualizacao(t => t + 1)} /></div><div className="xl:col-span-2 h-full"><GestaoEstoqueList itens={itens} onItemEditadoOrExcluido={() => setTriggerAtualizacao(t => t + 1)} onRefresh={() => setTriggerAtualizacao(t => t + 1)} /></div></div>} />
-              <Route path="/saidas" element={<div className="h-full animate-in fade-in duration-500 flex flex-col"><NovoEmprestimo itensDisponiveis={itens} usuarioAtual={usuarioAtual} onEmprestimoRealizado={() => { setTriggerAtualizacao(t => t + 1); mudarAba('entradas'); }} onOpenDetails={(tipo, dados) => abrirDetalhes(tipo, dados)} /></div>} />
-              <Route path="/entradas" element={<div className="h-full animate-in fade-in duration-500"><ListaEmprestimosAtivos triggerAtualizacao={triggerAtualizacao} onDevolucao={() => setTriggerAtualizacao(t => t + 1)} onOpenDetails={(dados) => abrirDetalhes('emprestimo', dados)} /></div>} />
-              <Route path="/agenda" element={<div className="animate-in fade-in duration-500 h-full w-full pb-0"><AgendaEstiloGoogle usuarioAtual={usuarioAtual} /></div>} />
-              <Route path="/calendario" element={<div className="animate-in fade-in duration-500"><CalendarioAgendamentos itensDisponiveis={itens} onOpenDetails={(tipo, dados) => abrirDetalhes(tipo, dados)} /></div>} />
-              <Route path="/relatorios" element={<div className="animate-in fade-in duration-500"><RelatoriosExportacao /></div>} />
-              <Route path="/manutencoes" element={<div className="animate-in fade-in duration-500"><Manutencoes /></div>} />
-              <Route path="/portal" element={<div className="animate-in fade-in duration-500 h-full"><PortalSolicitante usuarioAtual={usuarioAtual} isEmbedded={true} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} externalAba={abaPortal} setExternalAba={setAbaPortal} /></div>} />
-              <Route path="/bot_conhecimento" element={<div className="animate-in fade-in duration-500"><KnowledgeBot /></div>} />
-              <Route path="/chamados_externos" element={<div className="animate-in fade-in duration-700"><ChamadosAdmin onOpenDetails={(dados) => abrirDetalhes('chamado', dados)} /></div>} />
-              <Route path="/impressoras" element={<div className="animate-in fade-in duration-700"><PrintersAdmin /></div>} />
-              <Route path="/perfil" element={<div className="animate-in fade-in duration-500 pt-4"><EditarPerfil usuarioAtual={usuarioAtual} onPerfilAtualizado={handleUpdatePerfilComplete} /></div>} />
-              <Route path="/:ano/:serial" element={itemDetalhado ? <div className="h-full animate-in fade-in duration-500 px-4 md:px-6 pt-0 pb-0"><DetalhesGerencial itemDetalhado={itemDetalhado} setItemDetalhado={setItemDetalhado} onVoltar={voltarDosDetalhes} onUpdateItem={() => setTriggerAtualizacao(t => t + 1)} /></div> : loadingDetalhe ? <div className="h-full flex items-center justify-center"><div className="w-8 h-8 border-2 border-[var(--accent)]/10 border-t-[var(--accent)] rounded-full animate-spin" /></div> : <Navigate to="/" replace />} />
-              <Route path="/:protocoloUnico" element={itemDetalhado ? <div className="h-full animate-in fade-in duration-500 px-4 md:px-6 pt-0 pb-0"><DetalhesGerencial itemDetalhado={itemDetalhado} setItemDetalhado={setItemDetalhado} onVoltar={voltarDosDetalhes} onUpdateItem={() => setTriggerAtualizacao(t => t + 1)} /></div> : loadingDetalhe ? <div className="h-full flex items-center justify-center"><div className="w-8 h-8 border-2 border-[var(--accent)]/10 border-t-[var(--accent)] rounded-full animate-spin" /></div> : <Navigate to="/" replace />} />
-              <Route path="/detalhes" element={itemDetalhado ? <div className="h-full animate-in fade-in duration-500 px-4 md:px-6 pt-0 pb-0"><DetalhesGerencial itemDetalhado={itemDetalhado} setItemDetalhado={setItemDetalhado} onVoltar={voltarDosDetalhes} onUpdateItem={() => setTriggerAtualizacao(t => t + 1)} /></div> : loadingDetalhe ? <div className="h-full flex items-center justify-center"><div className="w-8 h-8 border-2 border-[var(--accent)]/10 border-t-[var(--accent)] rounded-full animate-spin" /></div> : <Navigate to="/" replace />} />
-            </Routes>
+          <div className={`flex-1 custom-scrollbar ${abaAtiva === 'agenda' || abaAtiva === 'detalhes' || abaAtiva === 'chamados_externos' ? 'overflow-hidden' : 'overflow-y-auto'}`} onClick={() => { setNotificacoesAberto(false); setMenuPerfilPopoverAberto(false); setIsSearchOpen(false); }}>
+            <div className={`border-r border-transparent border-b border-transparent flex flex-col ${['agenda', 'detalhes'].includes(abaAtiva) ? 'h-[calc(100vh-82px)] pb-0 m-0 px-[1%] pt-[1%]' : ['chamados_externos', 'saidas', 'estoque'].includes(abaAtiva) ? 'h-[calc(100vh-100px)] pb-[1%] m-[1%]' : 'min-h-full pb-[1%] m-[1%]'}`}>
+              <Routes>
+                <Route path="/" element={<DashboardMetricas triggerAtualizacao={triggerAtualizacao} usuarioAtual={usuarioAtual} onOpenDetails={abrirDetalhes} />} />
+                <Route path="/emprestimos" element={<div className="animate-in fade-in duration-500"><DashboardEmprestimos itens={itens} /></div>} />
+                <Route path="/estoque" element={<div className="h-full grid grid-cols-1 xl:grid-cols-3 gap-8 lg:gap-10 animate-in fade-in duration-500 items-stretch"><div className="xl:col-span-1 h-full"><CadastroItem onItemCadastrado={() => setTriggerAtualizacao(t => t + 1)} /></div><div className="xl:col-span-2 h-full"><GestaoEstoqueList itens={itens} onItemEditadoOrExcluido={() => setTriggerAtualizacao(t => t + 1)} onRefresh={() => setTriggerAtualizacao(t => t + 1)} /></div></div>} />
+                <Route path="/saidas" element={<div className="h-full animate-in fade-in duration-500 flex flex-col"><NovoEmprestimo itensDisponiveis={itens} usuarioAtual={usuarioAtual} onEmprestimoRealizado={() => { setTriggerAtualizacao(t => t + 1); mudarAba('entradas'); }} onOpenDetails={(tipo, dados) => abrirDetalhes(tipo, dados)} /></div>} />
+                <Route path="/entradas" element={<div className="h-full animate-in fade-in duration-500"><ListaEmprestimosAtivos triggerAtualizacao={triggerAtualizacao} onDevolucao={() => setTriggerAtualizacao(t => t + 1)} onOpenDetails={(dados) => abrirDetalhes('emprestimo', dados)} /></div>} />
+                <Route path="/agenda" element={<div className="animate-in fade-in duration-500 h-full w-full pb-0"><AgendaEstiloGoogle usuarioAtual={usuarioAtual} /></div>} />
+                <Route path="/calendario" element={<div className="animate-in fade-in duration-500"><CalendarioAgendamentos itensDisponiveis={itens} onOpenDetails={(tipo, dados) => abrirDetalhes(tipo, dados)} /></div>} />
+                <Route path="/relatorios" element={<div className="animate-in fade-in duration-500"><RelatoriosExportacao /></div>} />
+                <Route path="/manutencoes" element={<div className="animate-in fade-in duration-500"><Manutencoes /></div>} />
+                <Route path="/portal" element={<div className="animate-in fade-in duration-500 h-full"><PortalSolicitante usuarioAtual={usuarioAtual} isEmbedded={true} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} externalAba={abaPortal} setExternalAba={setAbaPortal} /></div>} />
+                <Route path="/bot_conhecimento" element={<div className="animate-in fade-in duration-500"><KnowledgeBot /></div>} />
+                <Route path="/chamados_externos" element={<div className="animate-in fade-in duration-700"><ChamadosAdmin onOpenDetails={(dados) => abrirDetalhes('chamado', dados)} /></div>} />
+                <Route path="/impressoras" element={<div className="animate-in fade-in duration-700"><PrintersAdmin /></div>} />
+                <Route path="/perfil" element={<div className="animate-in fade-in duration-500 pt-4"><EditarPerfil usuarioAtual={usuarioAtual} onPerfilAtualizado={handleUpdatePerfilComplete} /></div>} />
+                <Route path="/:ano/:serial" element={itemDetalhado ? <div className="h-full animate-in fade-in duration-500 px-4 md:px-6 pt-0 pb-0"><DetalhesGerencial itemDetalhado={itemDetalhado} setItemDetalhado={setItemDetalhado} onVoltar={voltarDosDetalhes} onUpdateItem={() => setTriggerAtualizacao(t => t + 1)} /></div> : loadingDetalhe ? <div className="h-full flex items-center justify-center"><div className="w-8 h-8 border-2 border-[var(--accent)]/10 border-t-[var(--accent)] rounded-full animate-spin" /></div> : <Navigate to="/" replace />} />
+                <Route path="/:protocoloUnico" element={itemDetalhado ? <div className="h-full animate-in fade-in duration-500 px-4 md:px-6 pt-0 pb-0"><DetalhesGerencial itemDetalhado={itemDetalhado} setItemDetalhado={setItemDetalhado} onVoltar={voltarDosDetalhes} onUpdateItem={() => setTriggerAtualizacao(t => t + 1)} /></div> : loadingDetalhe ? <div className="h-full flex items-center justify-center"><div className="w-8 h-8 border-2 border-[var(--accent)]/10 border-t-[var(--accent)] rounded-full animate-spin" /></div> : <Navigate to="/" replace />} />
+                <Route path="/detalhes" element={itemDetalhado ? <div className="h-full animate-in fade-in duration-500 px-4 md:px-6 pt-0 pb-0"><DetalhesGerencial itemDetalhado={itemDetalhado} setItemDetalhado={setItemDetalhado} onVoltar={voltarDosDetalhes} onUpdateItem={() => setTriggerAtualizacao(t => t + 1)} /></div> : loadingDetalhe ? <div className="h-full flex items-center justify-center"><div className="w-8 h-8 border-2 border-[var(--accent)]/10 border-t-[var(--accent)] rounded-full animate-spin" /></div> : <Navigate to="/" replace />} />
+              </Routes>
+            </div>
           </div>
-        </div>
         )}
       </main>
       <ChatBotIA />

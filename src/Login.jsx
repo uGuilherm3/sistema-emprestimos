@@ -204,22 +204,43 @@ export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
     }
   };
 
-  const inputClass = `w-full bg-transparent border-b border-slate-500 dark:border-[#808080] focus:border-slate-900 dark:focus:border-white text-slate-900 dark:text-white py-3 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-[#404040] text-sm autofill:shadow-[inset_0_0_0_1000px_var(--bg-page)] autofill:[text-fill-color:black] autofill:[-webkit-text-fill-color:black] dark:autofill:[text-fill-color:white] dark:autofill:[-webkit-text-fill-color:white]`;
+  const inputClass = `w-full bg-transparent border-b border-slate-500 dark:border-[#808080] focus:border-slate-900 dark:focus:border-white text-slate-900 dark:text-white py-3 outline-none placeholder:text-slate-400 dark:placeholder:text-[#404040] !text-base`;
   const labelClass = 'block text-[10px] font-bold uppercase text-slate-500 dark:text-[#808080] tracking-widest mb-1';
   const grad = 'linear-gradient(to bottom right, #254E70, #8D3046)';
 
   return (
     <>
-    <div className="min-h-screen bg-[var(--bg-page)] grid grid-cols-1 lg:grid-cols-2 animate-in fade-in duration-700 font-sans transition-colors duration-300">
+      <style>{`
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus {
+          -webkit-text-fill-color: ${isDarkMode ? 'white' : 'black'} !important;
+          -webkit-box-shadow: 0 0 0px 1000px ${isDarkMode ? '#131313' : '#f8fafc'} inset !important;
+          font-size: inherit !important;
+          font-family: inherit !important;
+          font-weight: inherit !important;
+          transition: background-color 5000s ease-in-out 0s !important;
+        }
+      `}</style>
+      <div className="min-h-screen bg-[var(--bg-page)] grid grid-cols-1 lg:grid-cols-2 animate-in fade-in duration-700 font-sans transition-colors duration-300">
 
-      {/* ── Painel Esquerdo: Formulário ou Bem-vindo ── */}
-      <div className="relative p-10 md:p-16 lg:p-24 flex flex-col justify-center overflow-y-auto">
-        <div className="absolute top-10 left-10 md:left-16 lg:left-24 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-sm overflow-hidden transition-colors duration-300">
-            <img src={LogoImg} className="w-full h-full object-cover" alt="Logo" />
+        {/* ── Painel Esquerdo: Formulário ou Bem-vindo ── */}
+        <div className="relative p-10 md:p-16 lg:p-24 flex flex-col justify-center overflow-y-auto">
+          <div className="absolute top-10 left-10 md:left-16 lg:left-24 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-sm overflow-hidden transition-colors duration-300">
+              <img src={LogoImg} className="w-full h-full object-cover" alt="Logo" />
+            </div>
+            <h1 className="text-lg font-black tracking-tighter text-slate-900 dark:text-white transition-colors duration-300">TI LEND.</h1>
           </div>
-          <h1 className="text-lg font-black tracking-tighter text-slate-900 dark:text-white transition-colors duration-300">TI LEND.</h1>
-        </div>
+
+          {/* Botão Dark Mode (Mobile Only) */}
+          <button 
+            onClick={() => setIsDarkMode(!isDarkMode)} 
+            className="absolute top-10 right-10 p-2 lg:hidden text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-full transition-all"
+          >
+            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+
           <div className="w-full max-w-2xl mx-auto mt-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
             <div className="mb-16"><h2 className="text-slate-900 dark:text-white text-5xl font-light tracking-tight">Login</h2></div>
             {erro && <div className="flex items-center gap-2.5 p-4 bg-red-50 dark:bg-red-500/10 border-l-2 border-red-500 text-red-600 dark:text-red-400 text-xs font-semibold mb-8"><ShieldAlert size={16} /><span>{erro}</span></div>}
@@ -227,11 +248,11 @@ export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
                 <div>
                   <label className={labelClass}>Usuário ou E-mail</label>
-                  <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className={inputClass} />
+                  <input name="username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className={inputClass} autoComplete="username" placeholder=" " />
                 </div>
                 <div>
                   <label className={labelClass}>Senha / PIN</label>
-                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className={inputClass} />
+                  <input name="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className={inputClass} autoComplete="current-password" placeholder=" " />
                 </div>
               </div>
               <div className="flex justify-end mt-20">
@@ -239,40 +260,40 @@ export default function Login({ onLoginSucesso, isDarkMode, setIsDarkMode }) {
               </div>
             </form>
           </div>
-      </div>
+        </div>
 
-      {/* Painel direito: fundo decorativo gradiente */}
-      <div className="hidden lg:flex h-full" style={{ background: grad }}>
+        {/* Painel direito: fundo decorativo gradiente */}
+        <div className="hidden lg:flex h-full" style={{ background: grad }}>
         <div className="w-full h-full relative flex flex-col items-center justify-center p-12 text-center">
-          <button onClick={() => setIsDarkMode(!isDarkMode)} className="absolute top-10 right-10 text-white/70 hover:text-white transition-colors">
-            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
+            <button onClick={() => setIsDarkMode(!isDarkMode)} className="absolute top-10 right-10 text-white/70 hover:text-white transition-colors">
+              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
 
-          <div className="animate-in fade-in slide-in-from-right-12 duration-1000">
-            <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-white/40 mb-5">
-              Bem-vindo ao Portal
-            </p>
-            <h2 className="text-5xl md:text-7xl font-light tracking-tight text-white leading-tight">
+            <div className="animate-in fade-in slide-in-from-right-12 duration-1000">
+              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-white/40 mb-5">
+                Bem-vindo ao Portal
+              </p>
+            <h2 className="text-3xl md:text-5xl font-medium tracking-tight text-white leading-tight uppercase">
               Sistemas <br /> OAB Ceará
             </h2>
-            <p className="text-sm text-white/40 mt-5">
-              Faça o login para visualizar as ferramentas
-            </p>
+              <p className="text-sm text-white/40 mt-5">
+                Faça o login para visualizar as ferramentas
+              </p>
+            </div>
           </div>
         </div>
+
       </div>
 
-    </div>
-
-    {transitioning && (
-      <div style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'var(--bg-page)',
-        zIndex: 9999,
-        animation: 'expandFromLeft 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards',
-      }} />
-    )}
+      {transitioning && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'var(--bg-page)',
+          zIndex: 9999,
+          animation: 'expandFromLeft 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards',
+        }} />
+      )}
     </>
   );
 }
