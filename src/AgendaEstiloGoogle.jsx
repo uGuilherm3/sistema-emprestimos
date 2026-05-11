@@ -24,7 +24,7 @@ import {
 
 const AgendaEstiloGoogle = ({ usuarioAtual }) => {
   // SIMULAÇÃO DE USUÁRIO LOGADO (Agora vindo das props se disponível)
-  const currentUser = usuarioAtual?.get('username') || 'Guilherme';
+  const currentUser = usuarioAtual?.get('username') || '';
   const isAdmin = usuarioAtual?.get('tipoUsuario') === 'adm';
 
   const getFotoPerfilUrl = () => {
@@ -199,7 +199,7 @@ const AgendaEstiloGoogle = ({ usuarioAtual }) => {
   const fetchEventos = async () => {
     setLoading(true);
     try {
-      const { data, error } = await api.agenda.list({ tecnico: currentUser });
+      const { data, error } = await api.agenda.list();
       if (error) throw new Error(error);
       processarEventos(data);
     } catch (err) {

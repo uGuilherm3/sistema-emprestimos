@@ -172,7 +172,7 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
            const { data: supaItens, error: errorItens } = await api.items.list({ limit: 500 });
            if (errorItens) throw new Error(errorItens);
            
-           const { data: todosResultados } = await api.emprestimos.list({ limit: 1000, select_fields: 'id,item_id,glpi_item_id,quantidade_emprestada,status_emprestimo,created_at,data_inicio_prevista,data_devolucao_prevista,data_hora_retorno' });
+           const { data: todosResultados } = await api.emprestimos.list({ in_status: 'Aberto,Pendente,Aprovado', limit: 1000, select_fields: 'id,item_id,glpi_item_id,quantidade_emprestada,status_emprestimo,created_at,data_inicio_prevista,data_devolucao_prevista,data_hora_retorno' });
            
            // Processar disponibilidade
            const itensProcessados = (supaItens || []).map(i => {

@@ -3,6 +3,7 @@
 // Controla: autenticação, layout da sidebar, roteamento entre módulos e tema claro/escuro.
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { api } from './utils/apiClient';
 import {
   Home, Activity, CalendarDays, FileText, Settings,
@@ -135,9 +136,15 @@ const MiniBars = ({ bars = [], label }) => (
 const PREVIEW_CARD_BASE = 'bg-[var(--bg-card)] rounded-2xl h-full overflow-hidden';
 
 
-const LgCard = ({ titulo, desc }) => (
-  <div className={`${PREVIEW_CARD_BASE} flex flex-col justify-end p-12`}>
-    <p className="text-[14px] font-bold uppercase tracking-widest text-slate-500 dark:text-[#505050] mb-4">Dashboard</p>
+const LgCard = ({ titulo, desc, icone: Icon }) => (
+  <div className={`${PREVIEW_CARD_BASE} relative overflow-hidden flex flex-col justify-end p-12 text-left`}>
+    {Icon && (
+      <Icon 
+        className={`absolute -top-28 -right-28 w-80 h-80 opacity-10 dark:opacity-[0.03] pointer-events-none text-white ${titulo === 'Manutenções' ? 'rotate-[168deg]' : '-rotate-12'}`} 
+        strokeWidth={1}
+      />
+    )}
+    <p className="text-[14px] font-medium tracking-widest text-slate-500 dark:text-[#505050]">Módulo selecionado</p>
     <h3 className="text-4xl font-light text-white mb-6 leading-snug">{titulo}</h3>
     <p className="text-base text-slate-400 dark:text-[#606060] leading-relaxed max-w-xl">{desc}</p>
   </div>
@@ -153,6 +160,9 @@ const SmCard = ({ label, val }) => (
 );
 
 const ModuloPreviewCards = ({ moduleId, itens = [], notificacoes = [] }) => {
+  const modInfo = LAUNCHER_MODULOS.find(m => m.id === moduleId);
+  const IconeModulo = modInfo?.icon;
+
   const total = itens.length;
   const disp = itens.filter(i => (i.quantidade_disponivel || 0) > 0).length;
   const atraso = notificacoes.filter(n => n.tipo === 'atraso').length;
@@ -161,26 +171,26 @@ const ModuloPreviewCards = ({ moduleId, itens = [], notificacoes = [] }) => {
   const cfg = {
     dashboard: {
       layout: 'A',
-      large: { titulo: 'Dashboard Geral', desc: 'Métricas executivas de empréstimos, devoluções, agenda e auditoria em tempo real.' },
+      large: { titulo: 'Dashboard', desc: 'Métricas executivas de empréstimos, devoluções, agenda e auditoria em tempo real.' },
       medium: <MiniRing pct={dispPct} label="Disponibilidade" color="#10b981" />,
       s1: { label: 'Itens Cadastrados', val: total },
       s2: { label: 'Em Atraso', val: atraso || '0' },
     },
     agenda: {
       layout: 'B',
-      large: { titulo: 'Minha Agenda', desc: 'Organize compromissos, tarefas e lembretes com visualização estilo Google Calendar.' },
+      large: { titulo: 'Agenda', desc: 'Organize compromissos, tarefas e lembretes com visualização estilo Google Calendar.' },
       medium: (
         <div className="flex flex-col items-center justify-center h-full p-8">
           <span className="text-6xl font-light text-white leading-none">12</span>
           <span className="text-[14px] text-slate-500 dark:text-[#505050] uppercase tracking-wider mt-5 text-center leading-tight">Eventos na Semana</span>
         </div>
       ),
-      s1: { label: 'Hoje', val: new Date().toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').toUpperCase() },
-      s2: { label: 'Mês', val: new Date().toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').toUpperCase() },
+      s1: { label: 'Mês', val: new Date().toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').toUpperCase() },
+      s2: { label: 'Hoje', val: new Date().toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').toUpperCase() },
     },
     estoque: {
       layout: 'C',
-      large: { titulo: 'Gestão de Empréstimos', desc: 'Registre saídas e devoluções, controle estoque e monitore empréstimos em aberto.' },
+      large: { titulo: 'Empréstimos', desc: 'Registre saídas e devoluções, controle estoque e monitore empréstimos em aberto.' },
       medium: <MiniBars label="Distribuição do estoque" bars={[
         { label: 'Disponível', pct: dispPct, color: '#10b981' },
         { label: 'Em uso', pct: 100 - dispPct, color: '#f59e0b' },
@@ -191,14 +201,14 @@ const ModuloPreviewCards = ({ moduleId, itens = [], notificacoes = [] }) => {
     },
     chamados_externos: {
       layout: 'D',
-      large: { titulo: 'Painel de Chamados', desc: 'Central integrada de suporte TI — abra, acompanhe e resolva chamados por protocolo.' },
+      large: { titulo: 'Chamados', desc: 'Central integrada de suporte TI — abra, acompanhe e resolva chamados por protocolo.' },
       medium: <MiniRing pct={65} label="Resolvidos" color="#3b82f6" />,
       s1: { label: 'Novos', val: notificacoes.filter(n => n.tipo === 'chamado_novo').length || '—' },
       s2: { label: 'Atualizados', val: notificacoes.filter(n => n.tipo === 'chamado_status').length || '—' },
     },
     impressoras: {
       layout: 'A',
-      large: { titulo: 'Gestão de Ativos', desc: 'Monitor de impressoras em tempo real — status online/offline, toner e histórico de impressões.' },
+      large: { titulo: 'Ativos', desc: 'Monitor de impressoras em tempo real — status online/offline, toner e histórico de impressões.' },
       medium: <MiniBars label="Nível de toner" bars={[
         { label: 'Crítico', pct: 15, color: '#ef4444' },
         { label: 'Normal', pct: 62, color: '#f59e0b' },
@@ -216,7 +226,7 @@ const ModuloPreviewCards = ({ moduleId, itens = [], notificacoes = [] }) => {
     },
     relatorios: {
       layout: 'C',
-      large: { titulo: 'Inteligência e Relatórios', desc: 'Exporte dados em CSV/Excel com filtros avançados de período, categoria e tipo.' },
+      large: { titulo: 'Relatórios', desc: 'Exporte dados em CSV/Excel com filtros avançados de período, categoria e tipo.' },
       medium: <MiniBars label="Categorias exportadas" bars={[
         { label: 'Empréstimos', pct: 80, color: '#254E70' },
         { label: 'Devoluções', pct: 55, color: '#8D3046' },
@@ -227,7 +237,7 @@ const ModuloPreviewCards = ({ moduleId, itens = [], notificacoes = [] }) => {
     },
     portal: {
       layout: 'D',
-      large: { titulo: 'Portal do Solicitante', desc: 'Espaço público para colaboradores solicitarem empréstimos de equipamentos com aprovação em tempo real.' },
+      large: { titulo: 'Portal', desc: 'Espaço público para colaboradores solicitarem empréstimos de equipamentos com aprovação em tempo real.' },
       medium: <MiniRing pct={dispPct} label="Disponível" color="#10b981" />,
       s1: { label: 'Disponíveis', val: disp },
       s2: { label: 'Categorias', val: [...new Set(itens.map(i => i.categoria).filter(Boolean))].length || '—' },
@@ -245,7 +255,7 @@ const ModuloPreviewCards = ({ moduleId, itens = [], notificacoes = [] }) => {
     // Large esquerda (flex), medium + smalls direita (fixo baseado em Sq)
     A: (
       <div style={{ display: 'grid', gridTemplateColumns: `1fr ${ColW}`, gridTemplateRows: '1fr 1fr', gap: G, height: H }}>
-        <div style={{ gridRow: '1/3' }}><LgCard {...cfg.large} /></div>
+        <div style={{ gridRow: '1/3' }}><LgCard {...cfg.large} icone={IconeModulo} /></div>
         <MdCard>{cfg.medium}</MdCard>
         <div style={{ display: 'grid', gridTemplateColumns: `${Sq} ${Sq}`, gap: G }}>
           <SmCard {...cfg.s1} /><SmCard {...cfg.s2} />
@@ -256,7 +266,7 @@ const ModuloPreviewCards = ({ moduleId, itens = [], notificacoes = [] }) => {
     B: (
       <div className="mx-auto" style={{ maxWidth: `calc(${Sq} * 3 + ${G}px * 2)` }}>
         <div style={{ display: 'grid', gridTemplateRows: '1.3fr 1fr', gap: G, height: H }}>
-          <LgCard {...cfg.large} />
+          <LgCard {...cfg.large} icone={IconeModulo} />
           <div style={{ display: 'grid', gridTemplateColumns: `${Sq} ${Sq} ${Sq}`, gap: G }}>
             <MdCard>{cfg.medium}</MdCard>
             <SmCard {...cfg.s1} /><SmCard {...cfg.s2} />
@@ -268,7 +278,7 @@ const ModuloPreviewCards = ({ moduleId, itens = [], notificacoes = [] }) => {
     C: (
       <div style={{ display: 'grid', gridTemplateColumns: `${ColW} 1fr`, gridTemplateRows: '1fr 1fr', gap: G, height: H }}>
         <MdCard>{cfg.medium}</MdCard>
-        <div style={{ gridColumn: '2', gridRow: '1/3' }}><LgCard {...cfg.large} /></div>
+        <div style={{ gridColumn: '2', gridRow: '1/3' }}><LgCard {...cfg.large} icone={IconeModulo} /></div>
         <div style={{ display: 'grid', gridTemplateColumns: `${Sq} ${Sq}`, gap: G }}>
           <SmCard {...cfg.s1} /><SmCard {...cfg.s2} />
         </div>
@@ -279,13 +289,13 @@ const ModuloPreviewCards = ({ moduleId, itens = [], notificacoes = [] }) => {
       <div style={{ display: 'grid', gridTemplateColumns: `${Sq} ${Sq} 1fr`, gridTemplateRows: '1fr 1fr', gap: G, height: H }}>
         <div style={{ gridRow: '1/3' }}><MdCard>{cfg.medium}</MdCard></div>
         <SmCard {...cfg.s1} /><SmCard {...cfg.s2} />
-        <div style={{ gridColumn: '2/4' }}><LgCard {...cfg.large} /></div>
+        <div style={{ gridColumn: '2/4' }}><LgCard {...cfg.large} icone={IconeModulo} /></div>
       </div>
     ),
   };
 
   return (
-    <div key={moduleId} className="w-full max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-200">
+    <div key={moduleId} className="w-full max-w-7xl mx-auto">
       {layouts[cfg.layout]}
     </div>
   );
@@ -304,6 +314,48 @@ export default function App() {
   const [showLauncher, setShowLauncher] = useState(false);
   const [animandoLauncher, setAnimandoLauncher] = useState(false);
   const [moduloPreview, setModuloPreview] = useState(null);
+  const [prevModuloIndex, setPrevModuloIndex] = useState(-1);
+  const [slideDirection, setSlideDirection] = useState(0);
+
+  // Lógica para determinar a direção do slide baseado na posição dos ícones
+  const handleSetModuloPreview = (newId) => {
+    if (newId === moduloPreview) return;
+    
+    if (newId) {
+      const newIndex = LAUNCHER_MODULOS.findIndex(m => m.id === newId);
+      if (prevModuloIndex !== -1) {
+        setSlideDirection(newIndex > prevModuloIndex ? 1 : -1);
+      } else {
+        setSlideDirection(0);
+      }
+      setPrevModuloIndex(newIndex);
+    } else {
+      setPrevModuloIndex(-1);
+      setSlideDirection(0);
+    }
+    setModuloPreview(newId);
+  };
+
+  const slideVariants = {
+    initial: (direction) => ({
+      x: direction > 0 ? 30 : (direction < 0 ? -30 : 0),
+      y: 15,
+      opacity: 0,
+      scale: 0.98
+    }),
+    animate: {
+      x: 0,
+      y: 0,
+      opacity: 1,
+      scale: 1
+    },
+    exit: (direction) => ({
+      x: direction > 0 ? -30 : (direction < 0 ? 30 : 0),
+      opacity: 0,
+      scale: 0.98,
+      transition: { duration: 0.2 }
+    })
+  };
   const [dockMouseX, setDockMouseX] = useState(null);
   const dockRef = useRef(null);
 
@@ -730,14 +782,14 @@ export default function App() {
                   if (field === 'tipoUsuario') return d.tipo_usuario;
                   return d[field];
                 },
-                save: async () => {}
+                save: async () => { }
               };
               setUsuarioAtual(userMock);
               if (sessionStorage.getItem('tilend_launcher_pending')) setShowLauncher(true);
               setIsLoadingAuth(false);
               return;
             }
-          } catch {}
+          } catch { }
         }
 
         // Busca os dados do usuário na tabela 'users' pelo ID salvo
@@ -812,13 +864,13 @@ export default function App() {
             api.emprestimos.list({ status: 'Aberto', limit: 200 }),
             api.emprestimos.list({ status: 'Devolvido', gte_data_hora_retorno: startOfToday.toISOString(), limit: 50 }),
             api.emprestimos.list({ in_status: 'Pendente,Aprovado', limit: 100 }),
-            api.agenda.list({ tecnico: usuarioAtual.get('username'), lembrete: 'true', gte_inicio: new Date().toISOString() })
+            api.agenda.list({ lembrete: 'true', gte_inicio: new Date().toISOString() })
           ];
 
           let results = await Promise.all(queries);
 
           if (results[4].error) {
-            results[4] = await api.agenda.list({ tecnico: usuarioAtual.get('username'), lembrete: 'true', gte_inicio: new Date().toISOString() });
+            results[4] = await api.agenda.list({ lembrete: 'true', gte_inicio: new Date().toISOString() });
           }
 
           const [resItens, resAbertos, resRetornos, , resLembretes] = results;
@@ -887,22 +939,26 @@ export default function App() {
             });
           }
 
-          // Lembretes de tarefa (30 minutos antes)
+          // Lembretes de tarefa (30 minutos antes) — apenas eventos do usuário ou em que é participante
           if (resLembretes.data) {
             const trintaMinutosEmMs = 30 * 60 * 1000;
             const agora = new Date();
+            const meuUsername = usuarioAtual.get('username');
             resLembretes.data.forEach(ev => {
+              const euSouCriador = ev.tecnico === meuUsername;
+              const euSouParticipante = Array.isArray(ev.participantes) && ev.participantes.includes(meuUsername);
+              if (!euSouCriador && !euSouParticipante) return;
+
               const inicio = new Date(ev.inicio);
               const diff = inicio.getTime() - agora.getTime();
 
-              // Se falta menos de 30 minutos (e ainda não começou)
               if (diff > 0 && diff <= trintaMinutosEmMs) {
                 arrayNotificacoesBrutas.push({
                   id: `lembrete-task-${ev.id}`,
-                  tipo: 'atraso', // Reutilizando estilo de alerta para chamar atenção
+                  tipo: 'atraso',
                   protocolo: `AGENDA`,
                   item: ev.titulo,
-                  solicitante: `Sua tarefa começa às ${inicio.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`,
+                  solicitante: `${euSouCriador ? 'Sua tarefa' : `Tarefa de ${ev.tecnico}`} começa às ${inicio.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`,
                   data: inicio,
                   isLembrete: true
                 });
@@ -1066,7 +1122,7 @@ export default function App() {
   // Toca a animação de saída, depois navega para o módulo escolhido.
   const abrirModuloLauncher = (rota) => {
     sessionStorage.removeItem('tilend_launcher_pending');
-    setModuloPreview(null);
+    handleSetModuloPreview(null);
     setAnimandoLauncher(true);
     setTimeout(() => {
       setShowLauncher(false);
@@ -1250,7 +1306,7 @@ export default function App() {
     'detalhes': { label: 'Detalhamento Técnico', icon: ArrowLeft }
   };
 
-const legendaUsuario = usuarioAtual.get('atribuicao') || 'Técnico de TI';
+  const legendaUsuario = usuarioAtual.get('atribuicao') || 'Técnico de TI';
 
   return (
     <div key="view-dashboard" className="flex h-screen bg-[var(--bg-page)] text-slate-900 dark:text-[#F8FAFC] selection:bg-[#8B5CF6]/30 font-sans transition-colors duration-300 overflow-hidden">
@@ -1587,12 +1643,12 @@ const legendaUsuario = usuarioAtual.get('atribuicao') || 'Técnico de TI';
                               className="p-5 rounded-2xl border border-slate-100 dark:border-white/5 hover:bg-[var(--bg-page)] dark:hover:bg-[var(--bg-card)]/[0.02] bg-[var(--bg-card)] dark:bg-transparent transition-colors flex gap-4 group relative shadow-sm cursor-pointer"
                             >
                               <div className={`p-3 rounded-xl shrink-0 h-fit shadow-inner border border-transparent ${n.tipo === 'atraso' ? 'bg-[#8D3046]/10 text-[#8D3046] border-[#8D3046]/20' :
-                                  n.tipo === 'pendente' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                                    n.tipo === 'agendado' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                                      n.tipo === 'saida' ? 'bg-[#254E70]/10 text-[#254E70] border-[#254E70]/20' :
-                                        n.tipo === 'chamado_novo' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' :
-                                          n.tipo === 'chamado_status' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                                            'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                n.tipo === 'pendente' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                  n.tipo === 'agendado' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                    n.tipo === 'saida' ? 'bg-[#254E70]/10 text-[#254E70] border-[#254E70]/20' :
+                                      n.tipo === 'chamado_novo' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' :
+                                        n.tipo === 'chamado_status' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                                          'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                                 }`}>
                                 {n.tipo === 'atraso' ? <AlertTriangle size={16} /> :
                                   n.tipo === 'pendente' ? <Globe size={16} /> :
@@ -1783,8 +1839,26 @@ const legendaUsuario = usuarioAtual.get('atribuicao') || 'Técnico de TI';
                 maxWidth: '1280px',
                 marginTop: moduloPreview ? '1.5rem' : '0',
               }}>
-                <div style={{ overflow: 'visible' }}>
-                  <ModuloPreviewCards moduleId={moduloPreview} itens={itens} notificacoes={notificacoes} />
+                <div style={{ overflow: 'visible', position: 'relative' }}>
+                  <AnimatePresence mode="wait" custom={slideDirection}>
+                    {moduloPreview && (
+                      <motion.div
+                        key={moduloPreview}
+                        custom={slideDirection}
+                        variants={slideVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        transition={{ 
+                          duration: 0.45, 
+                          ease: [0.23, 1, 0.32, 1] 
+                        }}
+                        className="w-full flex justify-center"
+                      >
+                        <ModuloPreviewCards moduleId={moduloPreview} itens={itens} notificacoes={notificacoes} />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
             </div>
@@ -1838,7 +1912,7 @@ const legendaUsuario = usuarioAtual.get('atribuicao') || 'Técnico de TI';
                           <button
                             onClick={() => {
                               if (isSelected) abrirModuloLauncher(modulo.rota);
-                              else setModuloPreview(modulo.id);
+                              else handleSetModuloPreview(modulo.id);
                             }}
                             disabled={animandoLauncher}
                             style={{
