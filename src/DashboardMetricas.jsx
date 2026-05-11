@@ -798,8 +798,8 @@ const DashboardMetricas = React.memo(({ triggerAtualizacao, usuarioAtual, onOpen
 
           {/* NOSSOS AGENTES */}
           <div className="space-y-8 shrink-0">
-            <div className={`space-y-8 px-2 ${agentes.length > 6 ? 'max-h-[480px] overflow-y-auto custom-scrollbar' : ''}`}>
-              {agentes.map(ag => (
+            <div className={`space-y-8 px-2 ${agentes.filter(a => a.online).length > 6 ? 'max-h-[480px] overflow-y-auto custom-scrollbar' : ''}`}>
+              {agentes.filter(ag => ag.online).map(ag => (
                 <div key={ag.id} className="flex items-center justify-between group cursor-pointer transition-all hover:translate-x-1 outline-none">
                   <div className="flex items-center gap-7">
                     <div className="relative">

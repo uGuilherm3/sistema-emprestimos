@@ -442,7 +442,7 @@ const AgendaEstiloGoogle = ({ usuarioAtual }) => {
       <div className="flex-1 flex flex-col overflow-hidden relative">
 
         {/* HEADER */}
-        <div className="pl-8 pr-0 pt-2 pb-6 bg-transparent">
+        <div className="pl-0 pr-0 pt-2 pb-6 bg-transparent">
           <div className="flex items-center justify-between gap-4">
 
             <div className="flex items-center gap-6 overflow-hidden">
@@ -878,7 +878,7 @@ const AgendaEstiloGoogle = ({ usuarioAtual }) => {
             </div>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto custom-scrollbar pl-8 pr-2 py-8 w-full">
+          <div className="flex-1 overflow-y-auto custom-scrollbar pl-0 pr-2 pt-8 pb-0 w-full">
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 w-full auto-rows-max">
               {eventos.filter(e => e.fixado).map(evento => (
                 <div
@@ -944,7 +944,7 @@ const AgendaEstiloGoogle = ({ usuarioAtual }) => {
 
       {/* PAINEL DIREITO */}
       <div className="w-[380px] flex flex-col shrink-0 overflow-y-auto custom-scrollbar" style={{ backgroundColor: 'rgba(var(--bg-soft-rgb), 0.2)', backdropBlur: '20px' }}>
-        <div className="px-8 pb-8 pt-2 space-y-12">
+        <div className="px-8 pb-0 pt-2 space-y-12">
 
           {/* CABEÇALHO FIXO: DATA E CLIMA */}
           <div className="flex items-end justify-between animate-in fade-in slide-in-from-top-4 duration-700">

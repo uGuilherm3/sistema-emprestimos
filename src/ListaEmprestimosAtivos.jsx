@@ -73,7 +73,7 @@ export default function ListaEmprestimosAtivos({ triggerAtualizacao, onDevolucao
     setLoadingDevolucaoId(grupo.id);
     try {
       const agora = new Date();
-      const textoAssinatura = `TERMO DE DEVOLUÇÃO ASSINADO POR AGENTE EM CONJUNTO COM ${nomeResponsavel.toUpperCase()} EM ${agora.toLocaleDateString('pt-BR')} ÀS ${agora.toLocaleTimeString('pt-BR')}`;
+      const textoAssinatura = `TERMO DE DEVOLUÇÃO ASSINADO POR ${nomeResponsavel.toUpperCase()} EM ${agora.toLocaleString('pt-BR')}`;
       await executarDevolucaoComAssinatura(grupo, nomeResponsavel, textoAssinatura, agora);
       setModalAssinatura(null);
     } catch (e) {

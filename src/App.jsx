@@ -1131,7 +1131,7 @@ export default function App() {
     }, 680);
   };
 
-  const handleUpdatePerfilComplete = (userAtualizado) => { setUsuarioAtual(null); setTimeout(() => { setUsuarioAtual(userAtualizado); }, 10); };
+  const handleUpdatePerfilComplete = (userAtualizado) => { setUsuarioAtual(userAtualizado); };
   const getFotoPerfilUrl = () => { if (!usuarioAtual) return null; const foto = usuarioAtual.get('foto_perfil'); return (foto && typeof foto.url === 'function') ? foto.url() : null; };
   const mudarAba = (id) => {
     if (id === 'dashboard#historico-dashboard') {
@@ -1470,16 +1470,7 @@ export default function App() {
 
               {abaAtiva === 'portal' && (
                 <div className="flex items-center gap-2 ml-6 animate-in fade-in slide-in-from-left-2 duration-500">
-                  <button
-                    onClick={() => setAbaPortal('dashboard')}
-                    className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
-                    style={{
-                      backgroundColor: abaPortal === 'dashboard' ? 'var(--bg-selected)' : 'var(--bg-soft)',
-                      color: abaPortal === 'dashboard' ? 'var(--text-selected)' : 'var(--text-muted)'
-                    }}
-                  >
-                    Dashboard
-                  </button>
+
                   <button
                     onClick={() => setAbaPortal('catalogo')}
                     className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
@@ -1941,7 +1932,7 @@ export default function App() {
           </div>
         ) : (
           <div className={`flex-1 custom-scrollbar ${abaAtiva === 'agenda' || abaAtiva === 'detalhes' || abaAtiva === 'chamados_externos' ? 'overflow-hidden' : 'overflow-y-auto'}`} onClick={() => { setNotificacoesAberto(false); setMenuPerfilPopoverAberto(false); setIsSearchOpen(false); }}>
-            <div className={`border-r border-transparent border-b border-transparent flex flex-col ${['agenda', 'detalhes'].includes(abaAtiva) ? 'h-[calc(100vh-82px)] pb-0 m-0 px-[1%] pt-[1%]' : ['chamados_externos', 'saidas', 'estoque'].includes(abaAtiva) ? 'h-[calc(100vh-100px)] pb-[1%] m-[1%]' : 'min-h-full pb-[1%] m-[1%]'}`}>
+            <div className={`border-r border-transparent border-b border-transparent flex flex-col ${abaAtiva === 'agenda' ? 'flex-1 pb-0 m-0 px-0 pt-0' : ['agenda', 'detalhes'].includes(abaAtiva) ? 'h-[calc(100vh-82px)] pb-0 m-0 px-[1%] pt-[1%]' : ['chamados_externos', 'saidas', 'estoque'].includes(abaAtiva) ? 'h-[calc(100vh-100px)] pb-[1%] m-[1%]' : 'min-h-full pb-[1%] m-[1%]'}`}>
               <Routes>
                 <Route path="/" element={<DashboardMetricas triggerAtualizacao={triggerAtualizacao} usuarioAtual={usuarioAtual} onOpenDetails={abrirDetalhes} />} />
                 <Route path="/emprestimos" element={<div className="animate-in fade-in duration-500"><DashboardEmprestimos itens={itens} /></div>} />

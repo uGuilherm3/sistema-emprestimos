@@ -297,7 +297,7 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
     setLoadingAction(true);
     try {
       const agora = new Date();
-      const textoAssinatura = `TERMO DE DEVOLUÇÃO ASSINADO POR AGENTE EM CONJUNTO COM ${nomeResponsavel.toUpperCase()} EM ${agora.toLocaleDateString('pt-BR')} ÀS ${agora.toLocaleTimeString('pt-BR')}`;
+      const textoAssinatura = `TERMO DE DEVOLUÇÃO ASSINADO POR ${nomeResponsavel.toUpperCase()} EM ${agora.toLocaleString('pt-BR')}`;
 
       const { data: userProfile } = await api.users.get(localStorage.getItem('tilend_user_id'));
       const retornoDate = agora.toISOString();

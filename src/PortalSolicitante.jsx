@@ -280,7 +280,7 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
     } catch (error) { console.error("Erro ao buscar histórico:", error); } finally { setLoadingHistorico(false); }
   };
 
-  useEffect(() => { if (abaPortal === 'historico' || abaPortal === 'dashboard') fetchHistorico(); }, [abaPortal, usuarioAtual]);
+  useEffect(() => { if (abaPortal === 'historico') fetchHistorico(); }, [abaPortal, usuarioAtual]);
 
   const handleAssinaturaEletronica = async (tipo, terceiro) => {
     if (!pedidoSelecionado || !usuarioAtual) return;
@@ -916,78 +916,7 @@ export default function PortalSolicitante({ usuarioAtual, onLogout, onVoltar, on
             </div>
         )}
 
-        {abaPortal === 'dashboard' && (() => {
-          const disponiveis = itens.filter(i => (Number(i.quantidade_disponivel) || 0) > 0).length;
-          const ativos = meusPedidos.filter(p => p.status === 'Aberto').length;
-          const agendados = meusPedidos.filter(p => p.status === 'Aprovado').length;
-          const concluidos = meusPedidos.filter(p => p.status === 'Devolvido').length;
-          const pendentes = meusPedidos.filter(p => p.status === 'Pendente').length;
-          const recentes = meusPedidos.slice(0, 5);
 
-          const statusConfig = {
-            'Aberto': { label: 'Ativo', color: '#254E70', bg: '#254E7018' },
-            'Aprovado': { label: 'Aprovado', color: '#10B981', bg: '#10B98118' },
-            'Pendente': { label: 'Pendente', color: '#F59E0B', bg: '#F59E0B18' },
-            'Devolvido': { label: 'Devolvido', color: '#6B7280', bg: '#6B728018' },
-          };
-
-          const cards = [
-            { label: 'Itens Disponíveis', value: disponiveis, color: '#10B981', sub: 'No catálogo agora' },
-            { label: 'Meus Empréstimos', value: ativos, color: '#254E70', sub: 'Atualmente em uso' },
-            { label: 'Agendamentos', value: agendados, color: '#7C3AED', sub: 'Aprovados para retirada' },
-            { label: 'Concluídos', value: concluidos + pendentes, color: '#6B7280', sub: `${pendentes} pendente${pendentes !== 1 ? 's' : ''}` },
-          ];
-
-          return (
-            <div className="animate-in fade-in duration-500 space-y-6">
-              <div className="bg-[var(--bg-card)] p-8 rounded-[2.5rem] transition-colors duration-300">
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Dashboard</h1>
-                <p className="text-xs text-slate-500 dark:text-[#606060] mt-1 font-medium">Visão geral das suas solicitações e do catálogo.</p>
-              </div>
-
-              <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-                {cards.map(card => (
-                  <div key={card.label} className="bg-[var(--bg-card)] rounded-2xl p-5 border border-slate-100 dark:border-[#1e1e1e] transition-colors duration-300">
-                    <div className="w-2 h-2 rounded-full mb-4" style={{ backgroundColor: card.color }} />
-                    <p className="text-2xl font-black text-slate-900 dark:text-white">{card.value}</p>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-[#606060] mt-1">{card.label}</p>
-                    <p className="text-[10px] text-slate-400 dark:text-[#505050] mt-1">{card.sub}</p>
-                  </div>
-                ))}
-              </div>
-
-              {recentes.length > 0 && (
-                <div className="bg-[var(--bg-card)] rounded-2xl border border-slate-100 dark:border-[#1e1e1e] overflow-hidden transition-colors duration-300">
-                  <div className="px-6 py-4 border-b border-slate-50 dark:border-[#181818]">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">Solicitações Recentes</p>
-                  </div>
-                  <div className="divide-y divide-slate-50 dark:divide-[#181818]">
-                    {recentes.map(pedido => {
-                      const cfg = statusConfig[pedido.status] || { label: pedido.status, color: '#6B7280', bg: '#6B728018' };
-                      return (
-                        <div key={pedido.id} className="px-6 py-3.5 flex items-center justify-between gap-4 hover:bg-[var(--bg-soft)] transition-colors">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[11px] font-bold text-slate-700 dark:text-[#A0A0A0] uppercase truncate">{pedido.itemNome}</p>
-                            {pedido.itemModelo && <p className="text-[10px] text-slate-400 dark:text-[#606060]">{pedido.itemModelo}</p>}
-                          </div>
-                          <span className="text-[9px] font-black uppercase px-2.5 py-1 rounded-full shrink-0" style={{ backgroundColor: cfg.bg, color: cfg.color }}>
-                            {cfg.label}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {loadingHistorico && (
-                <div className="flex justify-center py-10">
-                  <div className="w-7 h-7 border-4 border-[#10B981] border-t-transparent rounded-[10px] animate-spin" />
-                </div>
-              )}
-            </div>
-          );
-        })()}
 
         {abaPortal === 'historico' && (
             <div className="animate-in fade-in duration-500 max-w-5xl mx-auto h-full flex flex-col">

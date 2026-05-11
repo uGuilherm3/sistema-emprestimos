@@ -95,10 +95,10 @@ router.post('/foto/:userId', fotoUpload.single('foto'), async (req, res) => {
 });
 
 /**
- * DELETE /api/uploads/foto/:userId
+ * POST /api/uploads/foto/:userId/remover
  * Remove a foto do disco e limpa o campo no banco.
  */
-router.delete('/foto/:userId', async (req, res) => {
+router.post('/foto/:userId/remover', async (req, res) => {
   try {
     const userId = req.params.userId;
     const [rows] = await db.query('SELECT foto_perfil FROM users WHERE id = ? LIMIT 1', [userId]);

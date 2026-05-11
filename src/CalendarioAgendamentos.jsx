@@ -417,7 +417,7 @@ Chamado gerado automaticamente pela Agenda do Sistema.
     try {
       const agora = new Date();
       const labelAcaoTermo = tipo === 'retirada' ? 'RETIRADA' : 'DEVOLUÇÃO';
-      const textoAssinatura = `TERMO DE ${labelAcaoTermo} ASSINADO POR AGENTE EM CONJUNTO COM ${nomeResponsavel.toUpperCase()} EM ${agora.toLocaleDateString('pt-BR')} ÀS ${agora.toLocaleTimeString('pt-BR')}`;
+      const textoAssinatura = `TERMO DE ${labelAcaoTermo} ASSINADO POR ${nomeResponsavel.toUpperCase()} EM ${agora.toLocaleString('pt-BR')}`;
 
       if (tipo === 'retirada') {
         await executarSaidaComAssinatura(grupo, nomeResponsavel, textoAssinatura);

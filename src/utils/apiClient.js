@@ -100,7 +100,7 @@ export const api = {
       } catch (e) { return { data: null, error: e.message }; }
     },
 
-    deleteFoto: (userId) => req('DELETE', `/api/uploads/foto/${userId}`),
+    deleteFoto: (userId) => req('POST', `/api/uploads/foto/${userId}/remover`),
 
     /**
      * Envia um comprovante (imagem ou PDF) para um empréstimo.

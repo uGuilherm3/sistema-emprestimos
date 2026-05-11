@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from './utils/apiClient';
-import { UserCog, Mail, Lock, ShieldCheck, ShieldAlert, Camera, User, Briefcase, ArrowRight, Users, Edit3, CheckCircle2 } from 'lucide-react';
+import { UserCog, Mail, Lock, ShieldCheck, ShieldAlert, Camera, User, Briefcase, ArrowRight, Users, Edit3, CheckCircle2, X } from 'lucide-react';
 
 export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
   const [perfilForm, setPerfilForm] = useState({ nome: '', username: '', email: '', atribuicao: '', setor: '', newPassword: '', confirmPassword: '' });
@@ -58,10 +58,12 @@ export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
         newPassword: '',
         confirmPassword: ''
       });
-      const foto = targetUser.get('foto_perfil');
-      if (foto && typeof foto.url === 'function') setFotoPerfilPreview(foto.url());
-      else if (foto && typeof foto === 'string') setFotoPerfilPreview(foto);
-      else setFotoPerfilPreview(null);
+      if (!fotoInputRef.current?.files[0]) {
+        const foto = targetUser.get('foto_perfil');
+        if (foto && typeof foto.url === 'function') setFotoPerfilPreview(foto.url());
+        else if (foto && typeof foto === 'string') setFotoPerfilPreview(foto);
+        else setFotoPerfilPreview(null);
+      }
     }
     if (usuarioEspelho) setModoEdicaoAdmin(false);
   }, [usuarioAtual, usuarioEspelho]);
@@ -69,9 +71,20 @@ export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
   const handleFotoSelection = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { setErroUpdate('A foto deve ter no máximo 2MB.'); return; }
+      if (file.size > 5 * 1024 * 1024) { setErroUpdate('A foto deve ter no máximo 5MB.'); return; }
       setFotoPerfilPreview(URL.createObjectURL(file));
       setErroUpdate('');
+    }
+  };
+
+  const handleRemoverFoto = async () => {
+    const targetUserId = usuarioEspelho ? usuarioEspelho.id : usuarioAtual.id;
+    try {
+      await api.uploads.deleteFoto(targetUserId);
+      setFotoPerfilPreview(null);
+      if (fotoInputRef.current) fotoInputRef.current.value = '';
+    } catch (e) {
+      setErroUpdate('Erro ao remover foto.');
     }
   };
 
@@ -145,11 +158,17 @@ export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
             <div className="px-10 pb-10 -mt-16 flex flex-col md:flex-row items-end gap-6 relative z-0">
               <div className="relative">
                 <div className="w-32 h-32 rounded-[2rem] bg-[var(--bg-page)] overflow-hidden flex items-center justify-center border-4 border-[var(--bg-card)] shadow-sm">
-                  {fotoPerfilPreview ? <img src={fotoPerfilPreview} alt="Avatar" className="w-full h-full object-cover" /> : <User size={48} className="text-[#404040]" />}
+                  {fotoPerfilPreview
+                    ? <img src={fotoPerfilPreview} alt="Avatar" className="w-full h-full object-cover" onError={() => setFotoPerfilPreview(null)} />
+                    : <span className="text-4xl font-bold text-[#404040] uppercase select-none">{(perfilForm.nome || perfilForm.username || '?').charAt(0)}</span>
+                  }
                 </div>
                 {isEditable && (
                   <>
                     <button type="button" onClick={() => fotoInputRef.current.click()} className="absolute bottom-0 right-0 p-2.5 bg-slate-200 dark:bg-[#404040] text-slate-700 dark:text-white rounded-xl shadow-lg hover:scale-110 transition-transform"><Camera size={16} /></button>
+                    {fotoPerfilPreview && (
+                      <button type="button" onClick={handleRemoverFoto} className="absolute top-0 right-0 p-1.5 bg-red-500 text-white rounded-xl shadow-lg hover:scale-110 transition-transform"><X size={12} /></button>
+                    )}
                     <input type="file" ref={fotoInputRef} onChange={handleFotoSelection} className="hidden" accept="image/*" />
                   </>
                 )}

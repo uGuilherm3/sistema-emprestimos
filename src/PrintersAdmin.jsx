@@ -114,6 +114,7 @@ const MOCK_PRINTERS = [
 ];
 
 export default function PrintersAdmin() {
+  const [abaAtiva, setAbaAtiva] = useState('ativos'); // 'dashboard' ou 'ativos'
   const [printers, setPrinters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -188,51 +189,86 @@ export default function PrintersAdmin() {
   }
 
   return (
-    <div className="flex flex-col animate-in fade-in duration-700">
-      <div className="pb-10">
-      
-      {/* HEADER DE MÉTRICAS */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-10 pt-4">
-        <div className="flex items-center gap-6">
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black text-slate-400 dark:text-[#606060] uppercase tracking-widest mb-1">Total de Ativos</span>
-            <div className="flex items-center gap-2">
-              <span className="text-4xl font-light text-slate-900 dark:text-white leading-none">{stats.total}</span>
-              {!stats.isRealTime && (
-                <span className="px-2 py-0.5 bg-amber-500/10 text-amber-500 text-[8px] font-black uppercase rounded-md border border-amber-500/20">Simulado</span>
-              )}
+    <div className="flex flex-col animate-in fade-in duration-700 h-full">
+      <div className="flex items-center gap-2 mb-8">
+        <div className="bg-[var(--bg-soft)] p-1 rounded-2xl flex items-center gap-1">
+          <button
+            onClick={() => setAbaAtiva('dashboard')}
+            className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+              abaAtiva === 'dashboard' 
+                ? 'bg-[var(--bg-card)] text-slate-900 dark:text-white shadow-sm' 
+                : 'text-slate-500 dark:text-[#606060] hover:text-slate-700 dark:hover:text-white'
+            }`}
+          >
+            Dashboards
+          </button>
+          <button
+            onClick={() => setAbaAtiva('ativos')}
+            className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+              abaAtiva === 'ativos' 
+                ? 'bg-[var(--bg-card)] text-slate-900 dark:text-white shadow-sm' 
+                : 'text-slate-500 dark:text-[#606060] hover:text-slate-700 dark:hover:text-white'
+            }`}
+          >
+            Lista de Ativos
+          </button>
+        </div>
+      </div>
+
+      {abaAtiva === 'dashboard' ? (
+        <div className="flex-1 min-h-[750px] bg-[var(--bg-card)] rounded-[2.5rem] overflow-hidden border border-slate-200 dark:border-white/5 shadow-2xl shadow-black/5">
+          <iframe 
+            src="https://painel.oabce.local/print/graficos" 
+            className="w-full h-full border-none"
+            title="Dashboard de Impressão"
+          />
+        </div>
+      ) : (
+        <div className="pb-10">
+        
+          {/* HEADER DE MÉTRICAS */}
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-10 pt-4">
+            <div className="flex items-center gap-6">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-slate-400 dark:text-[#606060] uppercase tracking-widest mb-1">Total de Ativos</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-4xl font-light text-slate-900 dark:text-white leading-none">{stats.total}</span>
+                  {!stats.isRealTime && (
+                    <span className="px-2 py-0.5 bg-amber-500/10 text-amber-500 text-[8px] font-black uppercase rounded-md border border-amber-500/20">Simulado</span>
+                  )}
+                </div>
+              </div>
+              <div className="h-10 w-px bg-slate-200 dark:bg-white/10 hidden md:block"></div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Disponíveis</span>
+                <span className="text-4xl font-light text-emerald-500 leading-none">{stats.online}</span>
+              </div>
+              <div className="h-10 w-px bg-slate-200 dark:bg-white/10 hidden md:block"></div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">Interrompidos</span>
+                <span className="text-4xl font-light text-rose-500 leading-none">{stats.offline}</span>
+              </div>
             </div>
+
+            <button 
+              onClick={fetchPrinters}
+              disabled={refreshing}
+              className="flex items-center gap-2 px-6 py-3 bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] border border-slate-200 dark:border-white/5 rounded-2xl text-xs font-bold text-slate-600 dark:text-[#A0A0A0] transition-all active:scale-95 disabled:opacity-50"
+            >
+              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+              {refreshing ? 'Sincronizando...' : 'Atualizar Status'}
+            </button>
           </div>
-          <div className="h-10 w-px bg-slate-200 dark:bg-white/10 hidden md:block"></div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Disponíveis</span>
-            <span className="text-4xl font-light text-emerald-500 leading-none">{stats.online}</span>
-          </div>
-          <div className="h-10 w-px bg-slate-200 dark:bg-white/10 hidden md:block"></div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">Interrompidos</span>
-            <span className="text-4xl font-light text-rose-500 leading-none">{stats.offline}</span>
+
+          {/* GRID DE IMPRESSORAS */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
+            {printers.map((printer) => (
+              <PrinterCard key={printer.id} printer={printer} />
+            ))}
           </div>
         </div>
-
-        <button 
-          onClick={fetchPrinters}
-          disabled={refreshing}
-          className="flex items-center gap-2 px-6 py-3 bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] border border-slate-200 dark:border-white/5 rounded-2xl text-xs font-bold text-slate-600 dark:text-[#A0A0A0] transition-all active:scale-95 disabled:opacity-50"
-        >
-          <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-          {refreshing ? 'Sincronizando...' : 'Atualizar Status'}
-        </button>
-      </div>
-
-      {/* GRID DE IMPRESSORAS */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
-        {printers.map((printer) => (
-          <PrinterCard key={printer.id} printer={printer} />
-        ))}
-      </div>
+      )}
     </div>
-  </div>
   );
 }
 
