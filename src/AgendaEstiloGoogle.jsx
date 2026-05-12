@@ -742,7 +742,7 @@ const AgendaEstiloGoogle = ({ usuarioAtual }) => {
                                       onClick={(e) => { e.stopPropagation(); handleEdit(evento); }}
                                       className="p-1 hover:bg-black/5 rounded-full transition-colors"
                                     >
-                                      <MoreVertical size={14} className="text-black/30 shrink-0" />
+                                      <MoreVertical size={14} className="text-black/70 shrink-0" />
                                     </button>
                                   </div>
                                 );
@@ -760,7 +760,7 @@ const AgendaEstiloGoogle = ({ usuarioAtual }) => {
                                         onClick={(e) => { e.stopPropagation(); handleEdit(evento); }}
                                         className="p-1 hover:bg-black/5 rounded-full transition-colors"
                                       >
-                                        <MoreVertical size={14} className="text-black/20" />
+                                        <MoreVertical size={14} className="text-black/70" />
                                       </button>
                                     </div>
                                     <div className="space-y-1">
@@ -794,7 +794,7 @@ const AgendaEstiloGoogle = ({ usuarioAtual }) => {
                                       onClick={(e) => { e.stopPropagation(); handleEdit(evento); }}
                                       className="p-1 hover:bg-black/5 rounded-full transition-colors"
                                     >
-                                      <MoreVertical size={14} className="text-black/20" />
+                                      <MoreVertical size={14} className="text-black/70" />
                                     </button>
                                   </div>
 

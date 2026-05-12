@@ -17,6 +17,7 @@ import GestaoEstoqueList from './GestaoEstoqueList';
 import NovoEmprestimo from './NovoEmprestimo';
 import ListaEmprestimosAtivos from './ListaEmprestimosAtivos';
 import EditarPerfil from './EditarPerfil';
+import CriarPerfil from './CriarPerfil';
 import CalendarioAgendamentos from './CalendarioAgendamentos';
 import PortalSolicitante from './PortalSolicitante';
 import RelatoriosExportacao from './RelatoriosExportacao';
@@ -360,6 +361,9 @@ export default function App() {
   const dockRef = useRef(null);
 
   const [abaPortal, setAbaPortal] = useState('catalogo');
+  const [abaPerfil, setAbaPerfil] = useState('meu_perfil');
+  const [abaChamados, setAbaChamados] = useState('externos');
+  const [abaEstoque, setAbaEstoque] = useState('estoque');
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -1548,6 +1552,50 @@ export default function App() {
                   </button>
                 </div>
               )}
+              {abaAtiva === 'perfil' && (
+                <div className="flex items-center gap-2 ml-6 animate-in fade-in slide-in-from-left-2 duration-500">
+                  <button
+                    onClick={() => setAbaPerfil('meu_perfil')}
+                    className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                    style={{ backgroundColor: abaPerfil === 'meu_perfil' ? 'var(--bg-selected)' : 'var(--bg-soft)', color: abaPerfil === 'meu_perfil' ? 'var(--text-selected)' : 'var(--text-muted)' }}
+                  >Meu perfil</button>
+                  <button
+                    onClick={() => setAbaPerfil('criar_perfil')}
+                    className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                    style={{ backgroundColor: abaPerfil === 'criar_perfil' ? 'var(--bg-selected)' : 'var(--bg-soft)', color: abaPerfil === 'criar_perfil' ? 'var(--text-selected)' : 'var(--text-muted)' }}
+                  >Criar perfil</button>
+                </div>
+              )}
+
+              {abaAtiva === 'chamados_externos' && (
+                <div className="flex items-center gap-2 ml-6 animate-in fade-in slide-in-from-left-2 duration-500">
+                  <button
+                    onClick={() => setAbaChamados('externos')}
+                    className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                    style={{ backgroundColor: abaChamados === 'externos' ? 'var(--bg-selected)' : 'var(--bg-soft)', color: abaChamados === 'externos' ? 'var(--text-selected)' : 'var(--text-muted)' }}
+                  >Chamados externos</button>
+                  <button
+                    onClick={() => setAbaChamados('internos')}
+                    className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                    style={{ backgroundColor: abaChamados === 'internos' ? 'var(--bg-selected)' : 'var(--bg-soft)', color: abaChamados === 'internos' ? 'var(--text-selected)' : 'var(--text-muted)' }}
+                  >Chamados internos</button>
+                </div>
+              )}
+
+              {abaAtiva === 'impressoras' && (
+                <div className="flex items-center gap-2 ml-6 animate-in fade-in slide-in-from-left-2 duration-500">
+                  <button
+                    onClick={() => setAbaEstoque('estoque')}
+                    className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                    style={{ backgroundColor: abaEstoque === 'estoque' ? 'var(--bg-selected)' : 'var(--bg-soft)', color: abaEstoque === 'estoque' ? 'var(--text-selected)' : 'var(--text-muted)' }}
+                  >Ativos</button>
+                  <button
+                    onClick={() => setAbaEstoque('dashboard')}
+                    className="px-5 py-2.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap"
+                    style={{ backgroundColor: abaEstoque === 'dashboard' ? 'var(--bg-selected)' : 'var(--bg-soft)', color: abaEstoque === 'dashboard' ? 'var(--text-selected)' : 'var(--text-muted)' }}
+                  >Dashboard</button>
+                </div>
+              )}
             </>}
           </div>
 
@@ -1932,7 +1980,7 @@ export default function App() {
           </div>
         ) : (
           <div className={`flex-1 custom-scrollbar ${abaAtiva === 'agenda' || abaAtiva === 'detalhes' || abaAtiva === 'chamados_externos' ? 'overflow-hidden' : 'overflow-y-auto'}`} onClick={() => { setNotificacoesAberto(false); setMenuPerfilPopoverAberto(false); setIsSearchOpen(false); }}>
-            <div className={`border-r border-transparent border-b border-transparent flex flex-col ${abaAtiva === 'agenda' ? 'flex-1 pb-0 m-0 px-0 pt-0' : ['agenda', 'detalhes'].includes(abaAtiva) ? 'h-[calc(100vh-82px)] pb-0 m-0 px-[1%] pt-[1%]' : ['chamados_externos', 'saidas', 'estoque'].includes(abaAtiva) ? 'h-[calc(100vh-100px)] pb-[1%] m-[1%]' : 'min-h-full pb-[1%] m-[1%]'}`}>
+            <div className={`border-r border-transparent border-b border-transparent flex flex-col ${abaAtiva === 'agenda' ? 'h-full flex-1 pb-0 m-0 px-0 pt-0' : ['agenda', 'detalhes'].includes(abaAtiva) ? 'h-[calc(100vh-82px)] pb-0 m-0 px-[1%] pt-[1%]' : ['chamados_externos', 'saidas', 'estoque'].includes(abaAtiva) ? 'h-[calc(100vh-100px)] pb-[1%] m-[1%]' : 'min-h-full pb-[1%] m-[1%]'}`}>
               <Routes>
                 <Route path="/" element={<DashboardMetricas triggerAtualizacao={triggerAtualizacao} usuarioAtual={usuarioAtual} onOpenDetails={abrirDetalhes} />} />
                 <Route path="/emprestimos" element={<div className="animate-in fade-in duration-500"><DashboardEmprestimos itens={itens} /></div>} />
@@ -1945,9 +1993,25 @@ export default function App() {
                 <Route path="/manutencoes" element={<div className="animate-in fade-in duration-500"><Manutencoes /></div>} />
                 <Route path="/portal" element={<div className="animate-in fade-in duration-500 h-full"><PortalSolicitante usuarioAtual={usuarioAtual} isEmbedded={true} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} externalAba={abaPortal} setExternalAba={setAbaPortal} /></div>} />
                 <Route path="/bot_conhecimento" element={<div className="animate-in fade-in duration-500"><KnowledgeBot /></div>} />
-                <Route path="/chamados_externos" element={<div className="animate-in fade-in duration-700"><ChamadosAdmin onOpenDetails={(dados) => abrirDetalhes('chamado', dados)} /></div>} />
-                <Route path="/impressoras" element={<div className="animate-in fade-in duration-700"><PrintersAdmin /></div>} />
-                <Route path="/perfil" element={<div className="animate-in fade-in duration-500 pt-4"><EditarPerfil usuarioAtual={usuarioAtual} onPerfilAtualizado={handleUpdatePerfilComplete} /></div>} />
+                <Route path="/chamados_externos" element={
+                  abaChamados === 'externos' ? (
+                    <div className="animate-in fade-in duration-700 h-full"><ChamadosAdmin onOpenDetails={(dados) => abrirDetalhes('chamado', dados)} /></div>
+                  ) : (
+                    <div className="animate-in fade-in duration-700 h-full w-full rounded-2xl overflow-hidden bg-white">
+                      <iframe src="https://chamados.oabce.org.br/front/ticket.php" className="w-full h-full border-none" title="Chamados Internos GLPI" />
+                    </div>
+                  )
+                } />
+                <Route path="/impressoras" element={
+                  <div className="animate-in fade-in duration-700 h-full"><PrintersAdmin externalAba={abaEstoque} /></div>
+                } />
+                <Route path="/perfil" element={
+                  abaPerfil === 'meu_perfil' ? (
+                    <div className="animate-in fade-in duration-500 pt-4 h-full"><EditarPerfil usuarioAtual={usuarioAtual} onPerfilAtualizado={handleUpdatePerfilComplete} /></div>
+                  ) : (
+                    <div className="animate-in fade-in duration-500 pt-4 h-full"><CriarPerfil usuarioAtual={usuarioAtual} /></div>
+                  )
+                } />
                 <Route path="/:ano/:serial" element={itemDetalhado ? <div className="h-full animate-in fade-in duration-500 px-4 md:px-6 pt-0 pb-0"><DetalhesGerencial itemDetalhado={itemDetalhado} setItemDetalhado={setItemDetalhado} onVoltar={voltarDosDetalhes} onUpdateItem={() => setTriggerAtualizacao(t => t + 1)} /></div> : loadingDetalhe ? <div className="h-full flex items-center justify-center"><div className="w-8 h-8 border-2 border-[var(--accent)]/10 border-t-[var(--accent)] rounded-full animate-spin" /></div> : <Navigate to="/" replace />} />
                 <Route path="/:protocoloUnico" element={itemDetalhado ? <div className="h-full animate-in fade-in duration-500 px-4 md:px-6 pt-0 pb-0"><DetalhesGerencial itemDetalhado={itemDetalhado} setItemDetalhado={setItemDetalhado} onVoltar={voltarDosDetalhes} onUpdateItem={() => setTriggerAtualizacao(t => t + 1)} /></div> : loadingDetalhe ? <div className="h-full flex items-center justify-center"><div className="w-8 h-8 border-2 border-[var(--accent)]/10 border-t-[var(--accent)] rounded-full animate-spin" /></div> : <Navigate to="/" replace />} />
                 <Route path="/detalhes" element={itemDetalhado ? <div className="h-full animate-in fade-in duration-500 px-4 md:px-6 pt-0 pb-0"><DetalhesGerencial itemDetalhado={itemDetalhado} setItemDetalhado={setItemDetalhado} onVoltar={voltarDosDetalhes} onUpdateItem={() => setTriggerAtualizacao(t => t + 1)} /></div> : loadingDetalhe ? <div className="h-full flex items-center justify-center"><div className="w-8 h-8 border-2 border-[var(--accent)]/10 border-t-[var(--accent)] rounded-full animate-spin" /></div> : <Navigate to="/" replace />} />

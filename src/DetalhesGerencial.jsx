@@ -895,11 +895,11 @@ export default function DetalhesGerencial({ itemDetalhado: itemProp, setItemDeta
                             payload.observacao = observacaoText;
                           }
 
-                          const API_BASE = import.meta.env.VITE_CHAMADOS_API_BASE || 'http://localhost:3000/api';
+                          const API_BASE = import.meta.env.VITE_CHAMADOS_API_BASE || '/sistemas/api';
                           const resp = await fetch(`${API_BASE}/chamados/${dados.id}`, {
-                            method: 'PATCH',
+                            method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
+                            body: JSON.stringify({ _method: 'PATCH', ...payload })
                           });
 
                           if (!resp.ok) throw new Error('Erro na requisição');

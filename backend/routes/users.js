@@ -70,12 +70,13 @@ router.post('/check-exists', async (req, res) => {
 // POST /api/users — cria novo usuário
 router.post('/', async (req, res) => {
   try {
-    const { id, username, email, pin, nome, setor, tipo_usuario = 'default' } = req.body;
+    const { id, username, email, pin, nome, setor, tipo_usuario = 'Solicitante' } = req.body;
     const userId = id || crypto.randomUUID();
+    const usernameVal = username || `colab_${userId.replace(/-/g, '').slice(0, 8)}`;
     await db.query(
       `INSERT INTO users (id, username, email, pin, nome, setor, tipo_usuario)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [userId, username, email, pin, nome, setor, tipo_usuario]
+      [userId, usernameVal, email || null, pin || null, nome || null, setor || null, tipo_usuario]
     );
     const [rows] = await db.query(`SELECT * FROM users WHERE id = ?`, [userId]);
     res.status(201).json({ data: rows[0], error: null });

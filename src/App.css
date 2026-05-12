@@ -513,3 +513,40 @@ input::-webkit-inner-spin-button {
 }
 
 /* Arrow for the pill removed as per request */
+
+/* Pill espelhado para sidebars à direita (tooltip aparece à esquerda) */
+.sidebar-pill-left {
+  position: absolute;
+  right: 100%;
+  margin-right: 15px;
+  padding: 8px 14px;
+  background-color: #0f172a;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  border-radius: 9999px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1000000;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: block !important;
+}
+
+.dark .sidebar-pill-left {
+  background-color: #ffffff;
+  color: #0f172a;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+.group:hover > .sidebar-pill-left {
+  opacity: 1 !important;
+  transform: translateX(0) !important;
+  visibility: visible !important;
+}

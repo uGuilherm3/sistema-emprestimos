@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from './utils/apiClient';
-import { UserCog, Mail, Lock, ShieldCheck, ShieldAlert, Camera, User, Briefcase, ArrowRight, Users, Edit3, CheckCircle2, X } from 'lucide-react';
+import { UserCog, Mail, Lock, ShieldCheck, ShieldAlert, Camera, User, Briefcase, ArrowRight, Users, Edit3, CheckCircle2, X, Shield } from 'lucide-react';
 
-export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
-  const [perfilForm, setPerfilForm] = useState({ nome: '', username: '', email: '', atribuicao: '', setor: '', newPassword: '', confirmPassword: '' });
+const TIPOS = ['Adm', 'Técnico', 'Assistente', 'Solicitante'];
+
+export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado, usuarioEspelhoInicial, onEspelhoConsumido }) {
+  const [perfilForm, setPerfilForm] = useState({ nome: '', username: '', email: '', atribuicao: '', setor: '', tipo_usuario: 'Técnico', newPassword: '', confirmPassword: '' });
   const [loadingUpdate, setLoadingUpdate] = useState(false);
   const [sucessoUpdate, setSucessoUpdate] = useState(false);
   const [erroUpdate, setErroUpdate] = useState('');
@@ -14,6 +16,7 @@ export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
   const [listaUsuarios, setListaUsuarios] = useState([]);
   const [usuarioEspelho, setUsuarioEspelho] = useState(null);
   const [modoEdicaoAdmin, setModoEdicaoAdmin] = useState(false);
+  const [tooltipSidebar, setTooltipSidebar] = useState({ show: false, text: '', x: 0, y: 0 });
   const isAdmin = usuarioAtual?.get('tipoUsuario') === 'adm';
 
   const wrapUser = (perfil) => {
@@ -37,14 +40,18 @@ export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
   };
 
   useEffect(() => {
-    const fetchUsuarios = async () => {
-      if (isAdmin) {
-        const { data, error } = await api.users.list({ order: 'username', limit: 200 });
-        if (!error && data) setListaUsuarios(data);
-      }
-    };
-    fetchUsuarios();
-  }, [isAdmin]);
+    api.users.list({ order: 'nome', limit: 500 }).then(({ data, error }) => {
+      if (!error && data) setListaUsuarios(data);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (usuarioEspelhoInicial) {
+      setUsuarioEspelho(usuarioEspelhoInicial);
+      setModoEdicaoAdmin(true);
+      if (onEspelhoConsumido) onEspelhoConsumido();
+    }
+  }, [usuarioEspelhoInicial]);
 
   useEffect(() => {
     const targetUser = usuarioEspelho ? wrapUser(usuarioEspelho) : usuarioAtual;
@@ -55,6 +62,7 @@ export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
         email: targetUser.get('email') || '',
         atribuicao: targetUser.get('atribuicao') || '',
         setor: targetUser.get('setor') || '',
+        tipo_usuario: targetUser.get('tipoUsuario') || 'Técnico',
         newPassword: '',
         confirmPassword: ''
       });
@@ -111,7 +119,8 @@ export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
         username: perfilForm.username.trim(),
         atribuicao: perfilForm.atribuicao.trim(),
         setor: perfilForm.setor.trim().toUpperCase(),
-        email: perfilForm.email.trim()
+        email: perfilForm.email.trim(),
+        tipo_usuario: perfilForm.tipo_usuario,
       };
       if (perfilForm.newPassword) updates.pin = perfilForm.newPassword;
 
@@ -133,6 +142,9 @@ export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
   };
 
   const isEditable = !usuarioEspelho || (isAdmin && modoEdicaoAdmin);
+
+  const meuSetor = usuarioAtual?.get('setor');
+  const usuariosSetor = listaUsuarios.filter(u => u.setor === meuSetor && u.username !== usuarioAtual?.get('username'));
 
   return (
     <div className="relative w-full min-h-full flex flex-col items-center justify-center px-6 overflow-x-hidden">
@@ -197,6 +209,13 @@ export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
               </div>
               <div className="space-y-4">
                 <p className="text-[10px] font-bold text-[#606060] uppercase tracking-[0.2em] mb-2 ml-1">Segurança</p>
+                <div className="relative">
+                  <Shield size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-[#606060] z-10" />
+                  <select disabled={!isEditable} value={perfilForm.tipo_usuario} onChange={e => setPerfilForm({ ...perfilForm, tipo_usuario: e.target.value })}
+                    className="w-full pl-14 pr-6 py-4 bg-[var(--bg-page)] rounded-2xl text-sm text-slate-900 dark:text-white outline-none disabled:opacity-50 transition-all appearance-none cursor-pointer">
+                    {TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
                 <div className="relative"><Mail size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-[#606060]" /><input disabled={!isEditable} type="email" value={perfilForm.email} onChange={e => setPerfilForm({ ...perfilForm, email: e.target.value })} placeholder="E-mail Corporativo" className="w-full pl-14 pr-6 py-4 bg-[var(--bg-page)] rounded-2xl text-sm text-slate-900 dark:text-white outline-none disabled:opacity-50 transition-all" /></div>
                 <div className="relative"><Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-[#606060]" /><input disabled={!isEditable} type="password" value={perfilForm.newPassword} onChange={e => setPerfilForm({ ...perfilForm, newPassword: e.target.value })} placeholder="Nova senha" className="w-full pl-14 pr-6 py-4 bg-[var(--bg-page)] rounded-2xl text-sm text-slate-900 dark:text-white outline-none disabled:opacity-50 transition-all" /></div>
                 <div className="relative"><Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-[#606060]" /><input disabled={!isEditable} type="password" value={perfilForm.confirmPassword} onChange={e => setPerfilForm({ ...perfilForm, confirmPassword: e.target.value })} placeholder="Confirmar" className="w-full pl-14 pr-6 py-4 bg-[var(--bg-page)] rounded-2xl text-sm text-slate-900 dark:text-white outline-none disabled:opacity-50 transition-all" /></div>
@@ -241,38 +260,45 @@ export default function EditarPerfil({ usuarioAtual, onPerfilAtualizado }) {
         </form>
       </div>
 
-      {/* AGENTES NA DIREITA (ESTILO SUTIL E MINIMALISTA) */}
-      {isAdmin && (
+      {/* COLABORADORES DO SETOR — SIDEBAR DIREITA */}
+      {usuariosSetor.length > 0 && (
         <div className="fixed right-10 top-1/2 -translate-y-1/2 flex flex-col items-center gap-4 animate-in fade-in slide-in-from-right-4 duration-1000 hidden xl:flex z-40">
            
            <div className="flex flex-col items-center gap-3">
-              <div className="w-10 h-10 bg-[var(--bg-card)] rounded-full flex items-center justify-center text-[#606060] shadow-sm opacity-40"><Users size={18} /></div>
+              <div className="w-12 h-12 bg-[var(--bg-card)] rounded-full flex items-center justify-center text-[#606060] shadow-sm opacity-40"><Users size={20} /></div>
               <div className="h-16 w-px bg-gradient-to-b from-transparent via-[#606060]/20 to-transparent"></div>
            </div>
 
-           <div className="bg-[var(--bg-card)] p-2 rounded-full space-y-3">
-              {listaUsuarios
-                .filter(u => u.username !== usuarioAtual?.get('username'))
-                .map(user => (
+          <style>{`.sidebar-setor::-webkit-scrollbar{display:none}`}</style>
+          <div className="sidebar-setor bg-[var(--bg-card)] p-2.5 rounded-full flex flex-col items-center gap-3"
+            style={{ maxHeight: 'calc(8 * 52px)', overflowY: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {usuariosSetor.map(user => (
                  <button 
                     key={user.id} 
                     onClick={() => setUsuarioEspelho(user)} 
-                    className={`w-8 h-8 rounded-full overflow-hidden block transition-all relative group ${usuarioEspelho?.id === user.id ? 'ring-2 ring-black dark:ring-white scale-110 shadow-lg z-10' : 'opacity-40 hover:opacity-100 hover:scale-110'}`}
+                    onMouseEnter={(e) => { const r = e.currentTarget.getBoundingClientRect(); setTooltipSidebar({ show: true, text: user.nome || user.username, x: r.left, y: r.top + r.height / 2 }); }}
+                    onMouseLeave={() => setTooltipSidebar(t => ({ ...t, show: false }))}
+                    className={`w-10 h-10 rounded-full overflow-hidden block transition-all relative group shrink-0 cursor-pointer ${usuarioEspelho?.id === user.id ? 'ring-2 ring-black dark:ring-white scale-110 shadow-lg z-10' : 'opacity-40 hover:opacity-100 hover:scale-110'}`}
                  >
                     {user.foto_perfil ? (
                       <img src={user.foto_perfil} className="w-full h-full object-cover" alt={user.username} />
                     ) : (
-                      <div className="w-full h-full bg-black/10 flex items-center justify-center text-[8px] font-black uppercase text-slate-600">
-                        {user.username.charAt(0)}
+                      <div className="w-full h-full bg-black/10 dark:bg-white/10 flex items-center justify-center text-[8px] font-black uppercase text-slate-600 dark:text-slate-300">
+                        {(user.nome || user.username || '?').charAt(0)}
                       </div>
                     )}
-                    
-                    <span className="absolute right-full mr-4 px-2 py-1 bg-black text-white text-[8px] font-bold uppercase rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                      {user.nome || user.username}
-                    </span>
                  </button>
               ))}
            </div>
+        </div>
+      )}
+
+      {tooltipSidebar.show && (
+        <div
+          style={{ position: 'fixed', top: tooltipSidebar.y, left: tooltipSidebar.x - 8, transform: 'translate(-100%, -50%)', zIndex: 999999, pointerEvents: 'none' }}
+          className="px-3 py-2 bg-[#0f172a] dark:bg-white text-white dark:text-[#0f172a] text-xs font-medium rounded-full whitespace-nowrap shadow-lg border border-white/10 dark:border-black/10"
+        >
+          {tooltipSidebar.text}
         </div>
       )}
 

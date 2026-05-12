@@ -189,11 +189,19 @@ app.use('/api/chamados', async (req, res) => {
   const baseUrl = process.env.CHAMADOS_URL || 'http://192.168.0.253:3002/api';
   const target = `${baseUrl}/chamados${req.url === '/' ? '' : req.url}`;
   try {
+    // Suporte a method-override via _method no body (contorna bloqueio PATCH/DELETE no nginx do host)
+    let method = req.method;
+    let bodyPayload = req.body;
+    if (req.method === 'POST' && req.body?._method) {
+      method = req.body._method.toUpperCase();
+      const { _method, ...rest } = req.body;
+      bodyPayload = rest;
+    }
     const upstream = await fetch(target, {
-      method: req.method,
+      method,
       headers: { 'Content-Type': 'application/json' },
       signal: AbortSignal.timeout(8000),
-      ...(req.method !== 'GET' && req.method !== 'HEAD' ? { body: JSON.stringify(req.body) } : {}),
+      ...(method !== 'GET' && method !== 'HEAD' ? { body: JSON.stringify(bodyPayload) } : {}),
     });
     const ct = upstream.headers.get('content-type') || '';
     if (ct.includes('application/json')) {
